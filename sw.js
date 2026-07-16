@@ -1,4 +1,4 @@
-const CACHE = 'b777-v3';
+const CACHE = 'b777-v4';
 const ASSETS = ['./index.html', './questions.js', './manifest.json', './icon192.png', './icon512.png'];
 
 self.addEventListener('install', function(e){

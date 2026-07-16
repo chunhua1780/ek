@@ -15,9 +15,14 @@
     --bad:#ff3b30; --bad-bg:rgba(255,59,48,.10); --amber:#ff9500; --amber-bg:rgba(255,149,0,.13);
     --due-grad:linear-gradient(135deg,#007aff,#5ac8fa);
   }
+  /* Forced dark (theme picker) */
+  :root[data-theme="dark"]{ --bg:#000000; --card:#1c1c1e; --text:#f5f5f7; --sub:#98989d; --accent:#0a84ff; --border:rgba(255,255,255,.10);
+      --chip-bg:rgba(10,132,255,.16); --good:#30d158; --good-bg:rgba(48,209,88,.16);
+      --bad:#ff453a; --bad-bg:rgba(255,69,58,.15); --amber:#ff9f0a; --amber-bg:rgba(255,159,10,.15);
+      --due-grad:linear-gradient(135deg,#0a84ff,#64d2ff); }
+  /* Auto: follow the system unless the user forced light */
   @media (prefers-color-scheme: dark){
-    /* iOS dark */
-    :root{ --bg:#000000; --card:#1c1c1e; --text:#f5f5f7; --sub:#98989d; --accent:#0a84ff; --border:rgba(255,255,255,.10);
+    :root:not([data-theme="light"]){ --bg:#000000; --card:#1c1c1e; --text:#f5f5f7; --sub:#98989d; --accent:#0a84ff; --border:rgba(255,255,255,.10);
       --chip-bg:rgba(10,132,255,.16); --good:#30d158; --good-bg:rgba(48,209,88,.16);
       --bad:#ff453a; --bad-bg:rgba(255,69,58,.15); --amber:#ff9f0a; --amber-bg:rgba(255,159,10,.15);
       --due-grad:linear-gradient(135deg,#0a84ff,#64d2ff); }
@@ -112,6 +117,13 @@
   .flag-btn{border:1.5px solid var(--border);background:var(--card);color:var(--sub);font-size:12px;font-weight:700;
     padding:6px 12px;border-radius:20px;cursor:pointer;flex-shrink:0;transition:border-color .15s,color .15s,background .15s;}
   .flag-btn.on{border-color:var(--amber);color:var(--amber);background:var(--amber-bg);}
+  .seg{display:flex;background:var(--border);border-radius:10px;padding:2px;gap:2px;margin-left:auto;}
+  .seg button{border:none;background:transparent;color:var(--sub);font-size:11.5px;font-weight:600;
+    padding:5px 10px;border-radius:8px;cursor:pointer;transition:background .15s,color .15s;}
+  .seg button.sel{background:var(--card);color:var(--text);box-shadow:0 1px 3px rgba(0,0,0,.12);}
+  .home-chip{border:1px solid var(--border);background:var(--card);color:var(--accent);font-size:12.5px;font-weight:600;
+    padding:7px 13px;border-radius:20px;cursor:pointer;flex-shrink:0;box-shadow:0 1px 2px rgba(0,0,0,.04);}
+  .home-chip:active{transform:scale(.95);}
 
   /* Quiz layout: single column on phone, sidebar navigator on wide screens */
   .quiz-layout{display:block;}
@@ -129,14 +141,28 @@
   .nav-overlay.show{opacity:1;pointer-events:auto;}
   .nav-head{display:flex;align-items:center;justify-content:space-between;font-size:14px;font-weight:700;margin-bottom:12px;}
   .nav-close{border:none;background:var(--bg);color:var(--sub);width:30px;height:30px;border-radius:50%;font-size:14px;cursor:pointer;}
-  .nav-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(42px,1fr));gap:7px;}
-  .nav-cell{aspect-ratio:1;border-radius:10px;border:1.5px solid var(--border);background:var(--bg);font-size:12.5px;font-weight:700;
-    color:var(--sub);cursor:pointer;display:flex;align-items:center;justify-content:center;position:relative;padding:0;}
-  .nav-cell.done{background:var(--chip-bg);border-color:var(--accent);color:var(--accent);}
-  .nav-cell.ok{background:var(--good-bg);border-color:var(--good);color:var(--good);}
-  .nav-cell.bad{background:var(--bad-bg);border-color:var(--bad);color:var(--bad);}
-  .nav-cell.flag::after{content:'';position:absolute;top:3px;right:3px;width:7px;height:7px;border-radius:50%;background:var(--amber);}
-  .nav-cell.cur{box-shadow:0 0 0 2.5px var(--accent);}
+  /* CIIC-style vertical answer sheet: one narrow row per question,
+     number on the left, Remark checkbox on the right */
+  .nav-list{display:flex;flex-direction:column;border:1px solid var(--border);border-radius:12px;overflow:hidden;}
+  .nav-colhead{display:flex;align-items:center;font-size:10.5px;font-weight:700;color:var(--sub);
+    text-transform:uppercase;letter-spacing:.5px;padding:6px 10px;background:var(--bg);border-bottom:1px solid var(--border);}
+  .nav-colhead .rh{margin-left:auto;}
+  .nav-row{display:flex;align-items:center;gap:8px;width:100%;border:none;border-bottom:1px solid var(--border);
+    background:var(--card);padding:0 10px;height:27px;cursor:pointer;font-size:12px;font-weight:600;color:var(--text);text-align:left;}
+  .nav-row:last-child{border-bottom:none;}
+  .nav-row .num{width:26px;flex-shrink:0;color:var(--sub);font-variant-numeric:tabular-nums;}
+  .nav-row .st{font-size:10.5px;font-weight:700;color:var(--sub);}
+  .nav-row.done{background:var(--chip-bg);}
+  .nav-row.done .num, .nav-row.done .st{color:var(--accent);}
+  .nav-row.ok{background:var(--good-bg);}
+  .nav-row.ok .num, .nav-row.ok .st{color:var(--good);}
+  .nav-row.bad{background:var(--bad-bg);}
+  .nav-row.bad .num, .nav-row.bad .st{color:var(--bad);}
+  .nav-row.cur{box-shadow:inset 3px 0 0 var(--accent);}
+  .nav-row.cur .num{color:var(--accent);font-weight:800;}
+  .nav-row .rmk{margin-left:auto;width:15px;height:15px;border-radius:4px;border:1.5px solid var(--border);
+    background:var(--card);display:flex;align-items:center;justify-content:center;font-size:10px;color:#fff;flex-shrink:0;}
+  .nav-row.flag .rmk{background:var(--amber);border-color:var(--amber);}
   .nav-legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:11px;color:var(--sub);margin:12px 0 6px;}
   .nav-legend .lg{display:inline-block;width:11px;height:11px;border-radius:4px;border:1.5px solid var(--border);
     margin-right:4px;vertical-align:-1px;background:var(--bg);}
@@ -227,6 +253,14 @@
     .q-text{font-size:19px;}
     .ans-btn{font-size:15px;padding:15px 16px;}
     .card{padding:24px;}
+    /* iPad & up: CIIC-style answer sheet fixed on the LEFT */
+    .wrap{max-width:850px;}
+    .quiz-layout{display:grid;grid-template-columns:185px minmax(0,1fr);gap:18px;align-items:start;}
+    .navigator{position:sticky;top:16px;transform:none;box-shadow:0 1px 2px rgba(0,0,0,.03);
+      border:1px solid var(--border);border-radius:16px;max-height:calc(100vh - 40px);z-index:1;padding:12px;}
+    .nav-close{display:none;}
+    .nav-overlay{display:none;}
+    .sheet-btn{display:none;}
   }
   @media (min-width: 1000px){
     .wrap{max-width:980px;}
@@ -241,13 +275,8 @@
     .wrong-list-grid .wrong-item{margin-bottom:0;}
     .wrong-list-grid .section-title{grid-column:1/-1;}
     .wrong-list-grid .empty-state{grid-column:1/-1;}
-    /* Quiz becomes two columns: sticky answer sheet + question */
-    .quiz-layout{display:grid;grid-template-columns:260px minmax(0,1fr);gap:22px;align-items:start;}
-    .navigator{position:sticky;top:20px;transform:none;box-shadow:0 1px 4px rgba(0,0,0,.04);
-      border:1px solid var(--border);border-radius:18px;max-height:calc(100vh - 60px);z-index:1;padding:16px;}
-    .nav-close{display:none;}
-    .nav-overlay{display:none;}
-    .sheet-btn{display:none;}
+    .quiz-layout{grid-template-columns:210px minmax(0,1fr);gap:22px;}
+    .navigator{padding:14px;}
     .quiz-main .card{padding:26px 28px;}
     .q-text{font-size:19px;}
   }
@@ -261,12 +290,17 @@
 
   <!-- HOME -->
   <div class="screen active" id="home">
-    <div class="brand">
+    <div class="brand" style="align-items:center;">
       <img src="icon192.png" alt="">
       <div>
         <h1>B777 Question Bank</h1>
         <div class="sub" id="homeSub">964 questions</div>
       </div>
+    <div class="seg" id="themeSeg">
+      <button onclick="setTheme('auto')" data-t="auto">Auto</button>
+      <button onclick="setTheme('light')" data-t="light">☀︎</button>
+      <button onclick="setTheme('dark')" data-t="dark">☾</button>
+    </div>
       <span class="streak-badge" id="streakBadge" style="display:none;">🔥 <span id="streakN">0</span> day streak</span>
     </div>
 
@@ -349,7 +383,7 @@
   <!-- QUIZ -->
   <div class="screen" id="quiz">
     <div class="quiz-top">
-      <button class="back-link" onclick="quitSession()">‹ Exit</button>
+      <button class="home-chip" onclick="quitSession()">⌂ Home</button>
       <span class="cat-chip" id="quizCatChip">All</span>
       <span class="prog-txt" id="progTxt">1 / 20</span>
     </div>
@@ -361,10 +395,12 @@
           <span>Answer Sheet</span>
           <button class="nav-close" onclick="toggleNav(false)">✕</button>
         </div>
-        <div class="nav-grid" id="navGrid"></div>
+        <div class="nav-list" id="navGrid">
+          <div class="nav-colhead"><span>No.</span><span class="rh">Remark</span></div>
+        </div>
         <div class="nav-legend">
           <span><i class="lg done"></i>Answered</span>
-          <span><i class="lg flag" style="position:relative;"></i>Flagged</span>
+          <span><i class="lg flag"></i>Remarked</span>
           <span><i class="lg ok"></i>Correct</span>
           <span><i class="lg bad"></i>Wrong</span>
         </div>
@@ -376,7 +412,7 @@
         <div class="card">
           <div class="q-head">
             <div class="q-id" id="qId" style="margin-bottom:0;">Question ID - 00000</div>
-            <button class="flag-btn" id="flagBtn" onclick="toggleFlag()">🚩 Flag</button>
+            <button class="flag-btn" id="flagBtn" onclick="toggleFlag()">✓ Remark</button>
           </div>
           <div class="q-text" id="qText">…</div>
           <div id="ansList"></div>
@@ -701,6 +737,28 @@ function renderHome(){
 // per question, so you can jump around freely and everything is remembered.
 // instant=true → practice style (check each question as you go)
 // instant=false → exam style (answer freely, then Submit Paper grades everything)
+// ── Theme: auto / light / dark, persisted ──
+var THEME_KEY = 'b777_theme';
+function setTheme(t){
+  try{ localStorage.setItem(THEME_KEY, t); }catch(e){}
+  applyTheme();
+}
+function applyTheme(){
+  var t = 'auto';
+  try{ t = localStorage.getItem(THEME_KEY) || 'auto'; }catch(e){}
+  if(t==='auto') document.documentElement.removeAttribute('data-theme');
+  else document.documentElement.setAttribute('data-theme', t);
+  var dark = t==='dark' || (t==='auto' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+  var meta = document.querySelector('meta[name="theme-color"]');
+  if(meta) meta.setAttribute('content', dark ? '#000000' : '#f2f2f7');
+  var seg = document.getElementById('themeSeg');
+  if(seg) seg.querySelectorAll('button').forEach(function(b){
+    b.classList.toggle('sel', b.getAttribute('data-t')===t);
+  });
+}
+applyTheme();
+window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', applyTheme);
+
 var SESSION = null;
 var SETUP_CAT = 'all';
 var SETUP_COUNT = 30;
@@ -841,39 +899,58 @@ function backToPaper(){
 // ══════════════════════════════════════════════════════════════
 function buildNavGrid(){
   var grid = document.getElementById('navGrid');
-  grid.innerHTML = '';
+  grid.innerHTML = '<div class="nav-colhead"><span>No.</span><span class="rh">Remark</span></div>';
   SESSION.list.forEach(function(q, i){
-    var cell = document.createElement('button');
-    cell.className = 'nav-cell';
-    cell.textContent = i+1;
-    cell.onclick = function(){ jumpTo(i); };
-    grid.appendChild(cell);
+    var row = document.createElement('button');
+    row.className = 'nav-row';
+    row.innerHTML = '<span class="num">'+(i+1)+'</span><span class="st"></span><span class="rmk"></span>';
+    row.onclick = function(){ jumpTo(i); };
+    // Remark checkbox toggles without leaving the current question
+    row.querySelector('.rmk').onclick = function(ev){
+      ev.stopPropagation();
+      if(SESSION.finished) return;
+      SESSION.states[i].flagged = !SESSION.states[i].flagged;
+      if(i===SESSION.idx) document.getElementById('flagBtn').classList.toggle('on', SESSION.states[i].flagged);
+      updateNav();
+    };
+    grid.appendChild(row);
   });
 }
 
 function updateNav(){
-  var cells = document.querySelectorAll('#navGrid .nav-cell');
+  var cells = document.querySelectorAll('#navGrid .nav-row');
   var answered = 0;
   SESSION.states.forEach(function(st, i){
     var cell = cells[i]; if(!cell) return;
     var q = SESSION.list[i];
-    cell.className = 'nav-cell';
+    cell.className = 'nav-row';
+    var stTxt = '';
     var showGrade = SESSION.finished || st.revealed;
     if(showGrade && st.chosen!==null){
-      cell.classList.add(st.chosen===q.answer ? 'ok' : 'bad');
+      var ok = st.chosen===q.answer;
+      cell.classList.add(ok ? 'ok' : 'bad');
+      stTxt = ok ? '✓' : '✗';
     } else if(SESSION.finished && st.chosen===null){
       cell.classList.add('bad');
+      stTxt = '—';
     } else if(st.chosen!==null){
       cell.classList.add('done');
+      stTxt = st.chosen;
     }
     if(st.flagged && !SESSION.finished) cell.classList.add('flag');
     if(i===SESSION.idx) cell.classList.add('cur');
+    cell.querySelector('.st').textContent = stTxt;
+    if(st.flagged) cell.querySelector('.rmk').textContent = '✓';
+    else cell.querySelector('.rmk').textContent = '';
     if(st.chosen!==null) answered++;
   });
   document.getElementById('progTxt').textContent = answered + ' / ' + SESSION.list.length + ' answered';
   document.getElementById('progFill').style.width = Math.round(answered/SESSION.list.length*100) + '%';
   document.getElementById('sheetCount').textContent = '(' + answered + '/' + SESSION.list.length + ')';
   document.getElementById('finishBtn').style.display = SESSION.finished ? 'none' : 'block';
+  // Keep the current question visible in the sheet on long papers
+  var curRow = cells[SESSION.idx];
+  if(curRow && curRow.scrollIntoView) curRow.scrollIntoView({block:'nearest'});
 }
 
 function jumpTo(i){
