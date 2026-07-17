@@ -212,6 +212,17 @@
   .install-hint{font-size:12px;color:var(--sub);text-align:center;margin-top:22px;line-height:1.6;}
   .footer-link{display:block;text-align:center;font-size:12px;color:var(--sub);margin-top:10px;text-decoration:none;}
 
+  /* Auth (staff no. + email code) */
+  .auth-wrap{max-width:420px;margin:0 auto;}
+  .auth-input{width:100%;box-sizing:border-box;border:1.5px solid var(--border);background:var(--card);color:var(--text);
+    border-radius:14px;padding:14px 16px;font-size:16px;margin-bottom:12px;outline:none;transition:border-color .15s;}
+  .auth-input:focus{border-color:var(--accent);}
+  .auth-label{display:block;font-size:12.5px;font-weight:700;color:var(--sub);margin:0 0 6px 2px;text-transform:uppercase;letter-spacing:.4px;}
+  .auth-msg{font-size:13px;line-height:1.5;border-radius:12px;padding:10px 14px;margin-bottom:12px;display:none;}
+  .auth-msg.err{display:block;background:var(--bad-bg);color:var(--bad);}
+  .auth-msg.ok{display:block;background:var(--good-bg);color:var(--good);}
+  .code-input{text-align:center;letter-spacing:8px;font-size:22px;font-weight:700;font-variant-numeric:tabular-nums;}
+
   /* Apple-style press feedback: a small spring-like squish instead of a flat opacity flip */
   .mode-btn, .big-btn, .opt-pill, .due-card button, .tog{ transition:transform .12s cubic-bezier(.34,1.56,.64,1), opacity .12s, background .15s, border-color .15s; }
   .mode-btn:active, .big-btn:active, .opt-pill:active, .due-card button:active{ transform:scale(.97); opacity:1; }
@@ -303,8 +314,36 @@
 <body>
 <div class="wrap">
 
+  <!-- AUTH -->
+  <div class="screen" id="auth">
+    <div class="auth-wrap">
+      <div class="brand" style="align-items:center;justify-content:center;margin-bottom:18px;">
+        <img src="icon192.png" alt="">
+        <div><h1>B777 Question Bank</h1><div class="sub">Sign in to start studying</div></div>
+      </div>
+      <div class="card">
+        <div id="authStep1">
+          <label class="auth-label">Staff Number</label>
+          <input class="auth-input" id="authStaff" inputmode="numeric" autocomplete="off" placeholder="e.g. 123456">
+          <label class="auth-label">Email</label>
+          <input class="auth-input" id="authEmail" type="email" autocomplete="email" placeholder="you@example.com">
+          <div class="auth-msg" id="authMsg1"></div>
+          <button class="big-btn" id="sendCodeBtn" onclick="sendCode()">Send Verification Code</button>
+          <p class="install-hint" style="margin-top:14px;">A 6-digit code will be emailed to you.<br>First time here? This same step creates your account.</p>
+        </div>
+        <div id="authStep2" style="display:none;">
+          <p class="desc" style="text-align:center;">Enter the 6-digit code sent to<br><b id="authSentTo"></b></p>
+          <input class="auth-input code-input" id="authCode" inputmode="numeric" maxlength="6" autocomplete="one-time-code" placeholder="&bull;&bull;&bull;&bull;&bull;&bull;">
+          <div class="auth-msg" id="authMsg2"></div>
+          <button class="big-btn" id="verifyBtn" onclick="verifyCode()">Verify &amp; Sign In</button>
+          <button class="big-btn secondary" style="margin-top:10px;" onclick="backToStep1()">&lsaquo; Change email / resend</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- HOME -->
-  <div class="screen active" id="home">
+  <div class="screen" id="home">
     <div class="brand" style="align-items:center;">
       <img src="icon192.png" alt="">
       <div>
@@ -366,6 +405,7 @@
 
     <div class="install-hint" id="installHint">💡 Add this page to your Home Screen / Desktop — the whole app and question bank then work fully offline.</div>
     <a class="footer-link" href="#" onclick="openReportIssue(null);return false;">🚩 Report an error in the question bank</a>
+    <a class="footer-link" href="#" onclick="signOut();return false;">👤 <span id="whoami">Signed in</span> &middot; Sign out</a>
   </div>
 
   <!-- SETUP (practice) -->
@@ -498,6 +538,7 @@
 
 </div>
 
+<script src="supabase.js"></script>
 <script src="questions.js"></script>
 <script>
 // ══════════════════════════════════════════════════════════════
@@ -637,27 +678,12 @@ try{ localStorage.setItem(TRIAL_KEY, JSON.stringify(TRIAL)); }catch(e){}
 
 function trialDaysLeft(){ return Math.max(0, TRIAL_DAYS - Math.floor((Date.now()-TRIAL.start)/86400000)); }
 function isPaidUser(){ return !!(TRIAL.paidUntil && TRIAL.paidUntil > Date.now()); }
-function offlineAllowed(){ return isPaidUser() || trialDaysLeft() > 0; }
+function offlineAllowed(){ return true; } // free for everyone while we grow the user base
 
 function renderTrialBanner(){
-  var banner = document.getElementById('trialBanner');
-  var installHint = document.getElementById('installHint');
-  if(isPaidUser()){
-    banner.style.display = 'none';
-    installHint.textContent = '✅ Offline access unlocked — add this page to your Home Screen / Desktop any time.';
-    return;
-  }
-  var days = trialDaysLeft();
-  banner.style.display = 'flex';
-  if(days > 0){
-    banner.classList.remove('urgent');
-    document.getElementById('trialText').innerHTML = '<b>' + days + ' day' + (days===1?'':'s') + '</b> left of free offline access';
-    installHint.textContent = '💡 Add this page to your Home Screen / Desktop — the whole app and question bank then work fully offline during your trial.';
-  } else {
-    banner.classList.add('urgent');
-    document.getElementById('trialText').innerHTML = '<b>Trial ended</b> — offline access is now paused';
-    installHint.textContent = '⚠️ Your free trial has ended, so this device will need a connection each time. Upgrade to restore offline access.';
-  }
+  // Paid features paused: everything is free for now.
+  document.getElementById('trialBanner').style.display = 'none';
+  document.getElementById('installHint').textContent = '💡 Add this page to your Home Screen / Desktop — the whole app and question bank then work fully offline.';
 }
 
 function setupServiceWorker(){
@@ -1228,8 +1254,81 @@ function openReportIssue(q){
   window.open(url, '_blank');
 }
 
+// ═══ Auth: staff number + email verification code (Supabase OTP) ═══
+var SB_URL = 'https://mztoenhgfuomzrashrqk.supabase.co';
+var SB_KEY = 'sb_publishable_pOM3IfVWYiscQ-cz9vAwvA_F2Ht6zg1';
+var sb = null;
+try{ sb = supabase.createClient(SB_URL, SB_KEY); }catch(e){}
+
+var AUTH_EMAIL = '';
+function authMsg(n, txt, ok){
+  var el = document.getElementById('authMsg'+n);
+  el.className = 'auth-msg ' + (txt ? (ok?'ok':'err') : '');
+  el.textContent = txt || '';
+}
+async function sendCode(){
+  var staff = document.getElementById('authStaff').value.trim();
+  var email = document.getElementById('authEmail').value.trim().toLowerCase();
+  if(!staff){ authMsg(1,'Please enter your staff number.'); return; }
+  if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)){ authMsg(1,'Please enter a valid email address.'); return; }
+  if(!navigator.onLine){ authMsg(1,'You are offline \u2014 connect to the internet to sign in.'); return; }
+  var btn = document.getElementById('sendCodeBtn');
+  btn.disabled = true; btn.textContent = 'Sending\u2026';
+  var r = await sb.auth.signInWithOtp({ email: email, options: { shouldCreateUser: true, data: { staff_id: staff } } });
+  btn.disabled = false; btn.textContent = 'Send Verification Code';
+  if(r.error){ authMsg(1, r.error.message); return; }
+  AUTH_EMAIL = email;
+  try{ localStorage.setItem('b777_staff', staff); }catch(e){}
+  document.getElementById('authSentTo').textContent = email;
+  document.getElementById('authStep1').style.display = 'none';
+  document.getElementById('authStep2').style.display = 'block';
+  authMsg(2,'Code sent \u2014 check your inbox (and spam folder).', true);
+  document.getElementById('authCode').focus();
+}
+async function verifyCode(){
+  var code = document.getElementById('authCode').value.trim();
+  if(code.length < 6){ authMsg(2,'Enter the full 6-digit code.'); return; }
+  var btn = document.getElementById('verifyBtn');
+  btn.disabled = true; btn.textContent = 'Verifying\u2026';
+  var r = await sb.auth.verifyOtp({ email: AUTH_EMAIL, token: code, type: 'email' });
+  btn.disabled = false; btn.textContent = 'Verify & Sign In';
+  if(r.error){ authMsg(2,'Wrong or expired code \u2014 check it and try again.'); return; }
+  var staff = '';
+  try{ staff = localStorage.getItem('b777_staff') || ''; }catch(e){}
+  if(staff && r.data && r.data.user && (!r.data.user.user_metadata || r.data.user.user_metadata.staff_id !== staff)){
+    try{ sb.auth.updateUser({ data: { staff_id: staff } }); }catch(e){}
+  }
+  enterApp();
+}
+function backToStep1(){
+  document.getElementById('authStep2').style.display = 'none';
+  document.getElementById('authStep1').style.display = 'block';
+  authMsg(1,''); authMsg(2,'');
+}
+async function signOut(){
+  if(!confirm('Sign out on this device?')) return;
+  try{ await sb.auth.signOut(); }catch(e){}
+  location.reload();
+}
+function enterApp(){
+  try{
+    var st = localStorage.getItem('b777_staff');
+    var w = document.getElementById('whoami');
+    if(w) w.textContent = st ? ('Staff ' + st) : 'Signed in';
+  }catch(e){}
+  show('home'); renderHome();
+}
+async function initAuth(){
+  if(!sb){ enterApp(); return; } // never lock users out if the auth library fails
+  try{
+    var s = await sb.auth.getSession();
+    if(s.data && s.data.session){ enterApp(); return; }
+  }catch(e){ enterApp(); return; }
+  show('auth');
+}
+
 setupServiceWorker();
-renderHome();
+initAuth();
 </script>
 </body>
 </html>

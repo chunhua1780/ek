@@ -1,5 +1,5 @@
-const CACHE = 'b777-v6';
-const ASSETS = ['./', './index.html', './questions.js', './manifest.json', './icon192.png', './icon512.png'];
+const CACHE = 'b777-v7';
+const ASSETS = ['./', './index.html', './questions.js', './supabase.js', './manifest.json', './icon192.png', './icon512.png'];
 
 self.addEventListener('install', function(e){
   e.waitUntil(caches.open(CACHE).then(function(c){ return c.addAll(ASSETS); }));
