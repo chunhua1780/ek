@@ -1495,6 +1495,11 @@ function startHeartbeat(){
   hbTimer = setInterval(function(){
     if(document.visibilityState==='visible' && navigator.onLine && sb){
       try{ sb.rpc('b777_heartbeat'); }catch(e){}
+      sb.auth.getSession().then(function(s){
+        if(s.data && s.data.session){
+          sb.from('b777_devices').upsert({ user_id: s.data.session.user.id, device_id: deviceId(), last_seen: new Date().toISOString() });
+        }
+      });
     }
   }, 60000);
 }
@@ -1516,6 +1521,7 @@ async function signOut(){
   location.reload();
 }
 function enterApp(){
+  enforceDeviceLimit().then(function(ok){ if(ok) cloudPull(); });
   touchProfile(); startHeartbeat();
   try{
     var st = localStorage.getItem('b777_staff');
@@ -1532,6 +1538,91 @@ async function initAuth(){
   }catch(e){ enterApp(); return; }
   authMode('signin');
   show('auth');
+}
+
+// ═══ Cloud sync: per-user progress (cards + streak) & 2-device limit ═══
+function deviceId(){
+  var d = null;
+  try{ d = localStorage.getItem('b777_device'); }catch(e){}
+  if(!d){
+    d = 'dev_' + Math.random().toString(36).slice(2) + Date.now().toString(36);
+    try{ localStorage.setItem('b777_device', d); }catch(e){}
+  }
+  return d;
+}
+var SYNC_T = null;
+function scheduleCloudPush(){ clearTimeout(SYNC_T); SYNC_T = setTimeout(cloudPush, 4000); }
+async function cloudPush(){
+  try{
+    if(!navigator.onLine || !sb) return;
+    var s = await sb.auth.getSession(); if(!(s.data && s.data.session)) return;
+    await sb.from('b777_progress').upsert({
+      user_id: s.data.session.user.id, cards: CARDS, streak: STREAK,
+      updated_at: new Date().toISOString()
+    });
+  }catch(e){}
+}
+function mergeCards(remote){
+  var changed = false;
+  Object.keys(remote || {}).forEach(function(id){
+    var r = remote[id], l = CARDS[id];
+    if(!l){ CARDS[id] = r; changed = true; return; }
+    var base = (r.last||0) > (l.last||0) ? r : l;
+    var m = {
+      seen: Math.max(r.seen||0, l.seen||0), wrong: Math.max(r.wrong||0, l.wrong||0),
+      reps: Math.max(r.reps||0, l.reps||0), lapses: Math.max(r.lapses||0, l.lapses||0),
+      S: base.S, D: base.D, last: base.last, due: base.due
+    };
+    if(JSON.stringify(m) !== JSON.stringify(l)){ CARDS[id] = m; changed = true; }
+  });
+  return changed;
+}
+async function cloudPull(){
+  try{
+    if(!navigator.onLine || !sb) return;
+    var s = await sb.auth.getSession(); if(!(s.data && s.data.session)) return;
+    var r = await sb.from('b777_progress').select('cards,streak').eq('user_id', s.data.session.user.id).maybeSingle();
+    if(r.data){
+      if(mergeCards(r.data.cards)) saveCardsLocal();
+      var rs = r.data.streak || {};
+      if((rs.lastDate||'') > (STREAK.lastDate||'') || ((rs.lastDate===STREAK.lastDate) && (rs.count||0) > (STREAK.count||0))){
+        STREAK = { count: rs.count||0, lastDate: rs.lastDate||'' };
+        try{ localStorage.setItem(STREAK_KEY, JSON.stringify(STREAK)); }catch(e){}
+      }
+    }
+    cloudPush();
+    if(document.getElementById('home').classList.contains('active')) renderHome();
+  }catch(e){}
+}
+// every answer/streak save also schedules a cloud push
+var saveCardsLocal = saveCards;
+saveCards = function(){ saveCardsLocal(); scheduleCloudPush(); };
+var bumpStreakLocal = bumpStreak;
+bumpStreak = function(){ bumpStreakLocal(); scheduleCloudPush(); };
+
+async function enforceDeviceLimit(){
+  try{
+    if(!navigator.onLine || !sb) return true;
+    var s = await sb.auth.getSession(); if(!(s.data && s.data.session)) return true;
+    var uid = s.data.session.user.id, me = deviceId();
+    var r = await sb.from('b777_devices').select('device_id,last_seen').eq('user_id', uid).order('last_seen',{ascending:false});
+    var rows = r.data || [];
+    var known = rows.some(function(x){ return x.device_id === me; });
+    if(!known && rows.length >= 2){
+      if(confirm('Device limit: this account is already signed in on 2 devices.\n\nOK = sign the other devices out and use this one.\nCancel = stay signed out here.')){
+        try{ await sb.auth.signOut({ scope: 'others' }); }catch(e){}
+        try{ await sb.from('b777_devices').delete().eq('user_id', uid).neq('device_id', me); }catch(e){}
+      } else {
+        await sb.auth.signOut(); location.reload(); return false;
+      }
+    }
+    await sb.from('b777_devices').upsert({
+      user_id: uid, device_id: me,
+      device_name: String(navigator.platform || 'device').slice(0,40),
+      last_seen: new Date().toISOString()
+    });
+  }catch(e){}
+  return true;
 }
 
 // ═══ Community: Pilot Lounge chat + Sim Notes ═══
