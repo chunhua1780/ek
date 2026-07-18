@@ -347,21 +347,17 @@
         <div><h1>B777 Question Bank</h1><div class="sub">Sign in to start studying</div></div>
       </div>
       <div class="card">
-        <div id="authStep1">
+        <div>
           <label class="auth-label">Staff Number</label>
           <input class="auth-input" id="authStaff" inputmode="numeric" autocomplete="off" placeholder="e.g. 123456">
           <label class="auth-label">Email</label>
           <input class="auth-input" id="authEmail" type="email" autocomplete="email" placeholder="you@example.com">
+          <label class="auth-label">Password</label>
+          <input class="auth-input" id="authPass" type="password" autocomplete="current-password" placeholder="At least 6 characters" onkeydown="if(event.key==='Enter'){doSignIn();}">
           <div class="auth-msg" id="authMsg1"></div>
-          <button class="big-btn" id="sendCodeBtn" onclick="sendCode()">Send Verification Code</button>
-          <p class="install-hint" style="margin-top:14px;">A 6-digit code will be emailed to you.<br>First time here? This same step creates your account.</p>
-        </div>
-        <div id="authStep2" style="display:none;">
-          <p class="desc" style="text-align:center;">Enter the 6-digit code sent to<br><b id="authSentTo"></b></p>
-          <input class="auth-input code-input" id="authCode" inputmode="numeric" maxlength="6" autocomplete="one-time-code" placeholder="&bull;&bull;&bull;&bull;&bull;&bull;">
-          <div class="auth-msg" id="authMsg2"></div>
-          <button class="big-btn" id="verifyBtn" onclick="verifyCode()">Verify &amp; Sign In</button>
-          <button class="big-btn secondary" style="margin-top:10px;" onclick="backToStep1()">&lsaquo; Change email / resend</button>
+          <button class="big-btn" id="signInBtn" onclick="doSignIn()">Sign In</button>
+          <button class="big-btn secondary" id="signUpBtn" style="margin-top:10px;" onclick="doSignUp()">New here? Create Account</button>
+          <p class="install-hint" style="margin-top:14px;">First time: fill all three fields and tap Create Account.<br>Remember your password — it can't be reset yet.</p>
         </div>
       </div>
     </div>
@@ -1356,50 +1352,63 @@ var SB_KEY = 'sb_publishable_SSLhMPcjEbzcoIVFpjBWFA_-O3eOSUa';
 var sb = null;
 try{ sb = supabase.createClient(SB_URL, SB_KEY); }catch(e){}
 
-var AUTH_EMAIL = '';
 function authMsg(n, txt, ok){
   var el = document.getElementById('authMsg'+n);
   el.className = 'auth-msg ' + (txt ? (ok?'ok':'err') : '');
   el.textContent = txt || '';
 }
-async function sendCode(){
-  var staff = document.getElementById('authStaff').value.trim();
-  var email = document.getElementById('authEmail').value.trim().toLowerCase();
-  if(!staff){ authMsg(1,'Please enter your staff number.'); return; }
-  if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)){ authMsg(1,'Please enter a valid email address.'); return; }
-  if(!navigator.onLine){ authMsg(1,'You are offline \u2014 connect to the internet to sign in.'); return; }
-  var btn = document.getElementById('sendCodeBtn');
-  btn.disabled = true; btn.textContent = 'Sending\u2026';
-  var r = await sb.auth.signInWithOtp({ email: email, options: { shouldCreateUser: true, data: { staff_id: staff } } });
-  btn.disabled = false; btn.textContent = 'Send Verification Code';
-  if(r.error){ authMsg(1, r.error.message); return; }
-  AUTH_EMAIL = email;
-  try{ localStorage.setItem('b777_staff', staff); }catch(e){}
-  document.getElementById('authSentTo').textContent = email;
-  document.getElementById('authStep1').style.display = 'none';
-  document.getElementById('authStep2').style.display = 'block';
-  authMsg(2,'Code sent \u2014 check your inbox (and spam folder).', true);
-  document.getElementById('authCode').focus();
+function authFields(){
+  return {
+    staff: document.getElementById('authStaff').value.trim(),
+    email: document.getElementById('authEmail').value.trim().toLowerCase(),
+    pass: document.getElementById('authPass').value
+  };
 }
-async function verifyCode(){
-  var code = document.getElementById('authCode').value.trim();
-  if(code.length < 6){ authMsg(2,'Enter the full 6-digit code.'); return; }
-  var btn = document.getElementById('verifyBtn');
-  btn.disabled = true; btn.textContent = 'Verifying\u2026';
-  var r = await sb.auth.verifyOtp({ email: AUTH_EMAIL, token: code, type: 'email' });
-  btn.disabled = false; btn.textContent = 'Verify & Sign In';
-  if(r.error){ authMsg(2,'Wrong or expired code \u2014 check it and try again.'); return; }
-  var staff = '';
-  try{ staff = localStorage.getItem('b777_staff') || ''; }catch(e){}
-  if(staff && r.data && r.data.user && (!r.data.user.user_metadata || r.data.user.user_metadata.staff_id !== staff)){
-    try{ sb.auth.updateUser({ data: { staff_id: staff } }); }catch(e){}
+function authValidate(f, needStaff){
+  if(needStaff && !f.staff){ authMsg(1,'Please enter your staff number.'); return false; }
+  if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(f.email)){ authMsg(1,'Please enter a valid email address.'); return false; }
+  if(f.pass.length < 6){ authMsg(1,'Password must be at least 6 characters.'); return false; }
+  if(!navigator.onLine){ authMsg(1,'You are offline \u2014 connect to the internet to sign in.'); return false; }
+  return true;
+}
+async function doSignUp(){
+  var f = authFields();
+  if(!authValidate(f, true)) return;
+  var btn = document.getElementById('signUpBtn');
+  btn.disabled = true; btn.textContent = 'Creating\u2026';
+  var r = await sb.auth.signUp({ email: f.email, password: f.pass, options: { data: { staff_id: f.staff } } });
+  btn.disabled = false; btn.textContent = 'New here? Create Account';
+  if(r.error){
+    if(/already|registered/i.test(r.error.message)){ authMsg(1,'This email is already registered \u2014 use Sign In instead.'); }
+    else authMsg(1, r.error.message);
+    return;
+  }
+  try{ localStorage.setItem('b777_staff', f.staff); }catch(e){}
+  if(r.data && r.data.session){ enterApp(); return; }
+  // No session returned => email confirmation is still switched on in the dashboard
+  authMsg(1,'Account created, but email confirmation is still ON in Supabase. Turn off \u201cConfirm email\u201d (Authentication \u2192 Providers \u2192 Email), then Sign In.', false);
+}
+async function doSignIn(){
+  var f = authFields();
+  if(!authValidate(f, false)) return;
+  var btn = document.getElementById('signInBtn');
+  btn.disabled = true; btn.textContent = 'Signing in\u2026';
+  var r = await sb.auth.signInWithPassword({ email: f.email, password: f.pass });
+  btn.disabled = false; btn.textContent = 'Sign In';
+  if(r.error){
+    if(/invalid/i.test(r.error.message)){ authMsg(1,'Wrong email or password \u2014 or tap Create Account if you are new.'); }
+    else authMsg(1, r.error.message);
+    return;
+  }
+  if(f.staff){
+    try{ localStorage.setItem('b777_staff', f.staff); }catch(e){}
+    if(r.data && r.data.user && (!r.data.user.user_metadata || r.data.user.user_metadata.staff_id !== f.staff)){
+      try{ sb.auth.updateUser({ data: { staff_id: f.staff } }); }catch(e){}
+    }
+  } else if(r.data && r.data.user && r.data.user.user_metadata && r.data.user.user_metadata.staff_id){
+    try{ localStorage.setItem('b777_staff', r.data.user.user_metadata.staff_id); }catch(e){}
   }
   enterApp();
-}
-function backToStep1(){
-  document.getElementById('authStep2').style.display = 'none';
-  document.getElementById('authStep1').style.display = 'block';
-  authMsg(1,''); authMsg(2,'');
 }
 async function signOut(){
   if(!confirm('Sign out on this device?')) return;
