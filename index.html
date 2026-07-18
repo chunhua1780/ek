@@ -247,6 +247,11 @@
   .comment .ct{font-size:13.5px;line-height:1.5;white-space:pre-wrap;word-break:break-word;}
   .empty-note{text-align:center;color:var(--sub);font-size:13.5px;padding:26px 0;}
   textarea.auth-input{resize:vertical;min-height:90px;font-family:inherit;line-height:1.5;}
+  .mode-btn.admin .ic{background:rgba(255,149,0,.16);}
+  .ad-row{display:flex;justify-content:space-between;gap:8px;border-top:1px solid var(--border);padding:9px 0;font-size:13px;}
+  .ad-row:first-child{border-top:none;}
+  .ad-row .au{font-weight:700;}
+  .ad-row .am{color:var(--sub);font-size:12px;text-align:right;flex-shrink:0;}
 
   /* Apple-style press feedback: a small spring-like squish instead of a flat opacity flip */
   .mode-btn, .big-btn, .opt-pill, .due-card button, .tog{ transition:transform .12s cubic-bezier(.34,1.56,.64,1), opacity .12s, background .15s, border-color .15s; }
@@ -344,21 +349,35 @@
     <div class="auth-wrap">
       <div class="brand" style="align-items:center;justify-content:center;margin-bottom:18px;">
         <img src="icon192.png" alt="">
-        <div><h1>B777 Question Bank</h1><div class="sub">Sign in to start studying</div></div>
+        <div><h1>B777 Question Bank</h1><div class="sub" id="authSub">Sign in to start studying</div></div>
       </div>
       <div class="card">
-        <div>
+        <div class="af af-signup" style="display:none;">
           <label class="auth-label">Staff Number</label>
           <input class="auth-input" id="authStaff" inputmode="numeric" autocomplete="off" placeholder="e.g. 123456">
-          <label class="auth-label">Email</label>
-          <input class="auth-input" id="authEmail" type="email" autocomplete="email" placeholder="you@example.com">
-          <label class="auth-label">Password</label>
-          <input class="auth-input" id="authPass" type="password" autocomplete="current-password" placeholder="At least 6 characters" onkeydown="if(event.key==='Enter'){doSignIn();}">
-          <div class="auth-msg" id="authMsg1"></div>
-          <button class="big-btn" id="signInBtn" onclick="doSignIn()">Sign In</button>
-          <button class="big-btn secondary" id="signUpBtn" style="margin-top:10px;" onclick="doSignUp()">New here? Create Account</button>
-          <p class="install-hint" style="margin-top:14px;">First time: fill all three fields and tap Create Account.<br>Remember your password — it can't be reset yet.</p>
         </div>
+        <label class="auth-label">Email</label>
+        <input class="auth-input" id="authEmail" type="email" autocomplete="email" placeholder="you@example.com">
+        <div class="af af-signin af-signup">
+          <label class="auth-label">Password</label>
+          <input class="auth-input" id="authPass" type="password" autocomplete="current-password" placeholder="At least 6 characters" onkeydown="if(event.key==='Enter'&&AUTH_MODE==='signin'){doSignIn();}">
+        </div>
+        <div class="af af-signup af-reset" style="display:none;">
+          <label class="auth-label">Security Q1 &mdash; first aircraft type you ever flew</label>
+          <input class="auth-input" id="authA1" autocomplete="off" placeholder="e.g. Cessna 172">
+          <label class="auth-label">Security Q2 &mdash; city of your initial flight training</label>
+          <input class="auth-input" id="authA2" autocomplete="off" placeholder="e.g. Perth">
+        </div>
+        <div class="af af-reset" style="display:none;">
+          <label class="auth-label">New Password</label>
+          <input class="auth-input" id="authNewPass" type="password" autocomplete="new-password" placeholder="At least 6 characters">
+        </div>
+        <div class="auth-msg" id="authMsg1"></div>
+        <button class="big-btn" id="authMainBtn" onclick="authSubmit()">Sign In</button>
+        <a class="footer-link af af-signin" href="#" onclick="authMode('signup');return false;">New here? <b>Create an account</b></a>
+        <a class="footer-link af af-signin" href="#" onclick="authMode('reset');return false;">Forgot password?</a>
+        <a class="footer-link af af-signup af-reset" href="#" style="display:none;" onclick="authMode('signin');return false;">&lsaquo; Back to sign in</a>
+        <p class="install-hint af af-signup" style="margin-top:14px;display:none;">Answer the two security questions exactly &mdash; they are the only way to recover a forgotten password.</p>
       </div>
     </div>
   </div>
@@ -432,6 +451,11 @@
         <div><div class="t">Sim Notes</div><div class="d">Debriefs & heads-ups shared after sim sessions</div></div>
         <div class="arrow">›</div>
       </button>
+      <button class="mode-btn admin" id="adminCard" style="display:none;" onclick="openAdmin()">
+        <div class="ic">🛠️</div>
+        <div><div class="t">Admin Dashboard</div><div class="d">Users, activity time, posts &amp; chat stats</div></div>
+        <div class="arrow">›</div>
+      </button>
     </div>
 
     <div class="install-hint" id="installHint">💡 Add this page to your Home Screen / Desktop — the whole app and question bank then work fully offline.</div>
@@ -497,6 +521,28 @@
       <textarea class="auth-input" id="cmtText" maxlength="1000" style="min-height:70px;" placeholder="Add a note for others — what to watch out for…"></textarea>
       <div class="auth-msg" id="cmtMsg"></div>
       <button class="big-btn" onclick="submitComment()">Comment</button>
+    </div>
+  </div>
+
+  <!-- ADMIN -->
+  <div class="screen" id="admin">
+    <button class="back-link" onclick="show('home')">‹ Back</button>
+    <div class="card">
+      <h2>Admin Dashboard 🛠️</h2>
+      <div class="stat-row" style="margin-top:12px;">
+        <div class="stat-box"><div class="n" id="adUsers">–</div><div class="l">Users</div></div>
+        <div class="stat-box"><div class="n" id="adActiveToday">–</div><div class="l">Active today</div></div>
+        <div class="stat-box"><div class="n" id="adActive7">–</div><div class="l">Active 7 days</div></div>
+      </div>
+      <div class="stat-row" style="margin-top:10px;">
+        <div class="stat-box"><div class="n" id="adPosts">–</div><div class="l">Sim posts (today)</div></div>
+        <div class="stat-box"><div class="n" id="adMsgs">–</div><div class="l">Chat msgs (today)</div></div>
+        <div class="stat-box"><div class="n" id="adViews">–</div><div class="l">Post views today</div></div>
+      </div>
+    </div>
+    <div class="card">
+      <h2 style="font-size:16px;">Users</h2>
+      <div id="adUserList"><div class="empty-note">Loading…</div></div>
     </div>
   </div>
 
@@ -1352,63 +1398,113 @@ var SB_KEY = 'sb_publishable_SSLhMPcjEbzcoIVFpjBWFA_-O3eOSUa';
 var sb = null;
 try{ sb = supabase.createClient(SB_URL, SB_KEY); }catch(e){}
 
+var AUTH_MODE = 'signin';
 function authMsg(n, txt, ok){
   var el = document.getElementById('authMsg'+n);
   el.className = 'auth-msg ' + (txt ? (ok?'ok':'err') : '');
   el.textContent = txt || '';
 }
-function authFields(){
-  return {
-    staff: document.getElementById('authStaff').value.trim(),
-    email: document.getElementById('authEmail').value.trim().toLowerCase(),
-    pass: document.getElementById('authPass').value
-  };
+function authMode(m){
+  AUTH_MODE = m;
+  document.querySelectorAll('#auth .af').forEach(function(el){
+    el.style.display = el.classList.contains('af-'+m) ? '' : 'none';
+  });
+  var btn = document.getElementById('authMainBtn');
+  btn.textContent = m==='signup' ? 'Create Account' : m==='reset' ? 'Reset Password' : 'Sign In';
+  document.getElementById('authSub').textContent = m==='signup' ? 'Create your account' : m==='reset' ? 'Recover your password' : 'Sign in to start studying';
+  authMsg(1,'');
 }
-function authValidate(f, needStaff){
-  if(needStaff && !f.staff){ authMsg(1,'Please enter your staff number.'); return false; }
-  if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(f.email)){ authMsg(1,'Please enter a valid email address.'); return false; }
-  if(f.pass.length < 6){ authMsg(1,'Password must be at least 6 characters.'); return false; }
-  if(!navigator.onLine){ authMsg(1,'You are offline \u2014 connect to the internet to sign in.'); return false; }
-  return true;
+async function ansHash(s){
+  var data = new TextEncoder().encode('b777|' + s.trim().toLowerCase().replace(/\s+/g,' '));
+  var d = await crypto.subtle.digest('SHA-256', data);
+  return Array.from(new Uint8Array(d)).map(function(b){ return b.toString(16).padStart(2,'0'); }).join('');
 }
+function authSubmit(){
+  if(AUTH_MODE==='signup') doSignUp();
+  else if(AUTH_MODE==='reset') doReset();
+  else doSignIn();
+}
+function gv(id){ return document.getElementById(id).value; }
 async function doSignUp(){
-  var f = authFields();
-  if(!authValidate(f, true)) return;
-  var btn = document.getElementById('signUpBtn');
+  var staff = gv('authStaff').trim(), email = gv('authEmail').trim().toLowerCase(), pass = gv('authPass');
+  var a1 = gv('authA1').trim(), a2 = gv('authA2').trim();
+  if(!staff){ authMsg(1,'Please enter your staff number.'); return; }
+  if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)){ authMsg(1,'Please enter a valid email address.'); return; }
+  if(pass.length < 6){ authMsg(1,'Password must be at least 6 characters.'); return; }
+  if(!a1 || !a2){ authMsg(1,'Answer both security questions \u2014 they are how you recover a lost password.'); return; }
+  if(!navigator.onLine){ authMsg(1,'You are offline.'); return; }
+  var btn = document.getElementById('authMainBtn');
   btn.disabled = true; btn.textContent = 'Creating\u2026';
-  var r = await sb.auth.signUp({ email: f.email, password: f.pass, options: { data: { staff_id: f.staff } } });
-  btn.disabled = false; btn.textContent = 'New here? Create Account';
+  var r = await sb.auth.signUp({ email: email, password: pass, options: { data: { staff_id: staff } } });
+  btn.disabled = false; btn.textContent = 'Create Account';
   if(r.error){
-    if(/already|registered/i.test(r.error.message)){ authMsg(1,'This email is already registered \u2014 use Sign In instead.'); }
-    else authMsg(1, r.error.message);
+    authMsg(1, /already|registered/i.test(r.error.message) ? 'This email is already registered \u2014 go back and Sign In.' : r.error.message);
     return;
   }
-  try{ localStorage.setItem('b777_staff', f.staff); }catch(e){}
-  if(r.data && r.data.session){ enterApp(); return; }
-  // No session returned => email confirmation is still switched on in the dashboard
-  authMsg(1,'Account created, but email confirmation is still ON in Supabase. Turn off \u201cConfirm email\u201d (Authentication \u2192 Providers \u2192 Email), then Sign In.', false);
+  try{ localStorage.setItem('b777_staff', staff); }catch(e){}
+  if(!(r.data && r.data.session)){
+    authMsg(1,'Account created but auto sign-in is blocked \u2014 in Supabase turn OFF \u201cConfirm email\u201d (Authentication \u2192 Providers \u2192 Email), then Sign In.');
+    return;
+  }
+  // store profile + hashed security answers
+  var h1 = await ansHash(a1), h2 = await ansHash(a2);
+  await sb.from('b777_profiles').upsert({ user_id: r.data.session.user.id, staff_id: staff, email: email, q1_hash: h1, q2_hash: h2, last_seen: new Date().toISOString() });
+  enterApp();
 }
 async function doSignIn(){
-  var f = authFields();
-  if(!authValidate(f, false)) return;
-  var btn = document.getElementById('signInBtn');
+  var email = gv('authEmail').trim().toLowerCase(), pass = gv('authPass');
+  if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)){ authMsg(1,'Please enter a valid email address.'); return; }
+  if(pass.length < 6){ authMsg(1,'Password must be at least 6 characters.'); return; }
+  if(!navigator.onLine){ authMsg(1,'You are offline.'); return; }
+  var btn = document.getElementById('authMainBtn');
   btn.disabled = true; btn.textContent = 'Signing in\u2026';
-  var r = await sb.auth.signInWithPassword({ email: f.email, password: f.pass });
+  var r = await sb.auth.signInWithPassword({ email: email, password: pass });
   btn.disabled = false; btn.textContent = 'Sign In';
   if(r.error){
-    if(/invalid/i.test(r.error.message)){ authMsg(1,'Wrong email or password \u2014 or tap Create Account if you are new.'); }
-    else authMsg(1, r.error.message);
+    authMsg(1, /invalid/i.test(r.error.message) ? 'Wrong email or password \u2014 or create an account if you are new.' : r.error.message);
     return;
   }
-  if(f.staff){
-    try{ localStorage.setItem('b777_staff', f.staff); }catch(e){}
-    if(r.data && r.data.user && (!r.data.user.user_metadata || r.data.user.user_metadata.staff_id !== f.staff)){
-      try{ sb.auth.updateUser({ data: { staff_id: f.staff } }); }catch(e){}
-    }
-  } else if(r.data && r.data.user && r.data.user.user_metadata && r.data.user.user_metadata.staff_id){
-    try{ localStorage.setItem('b777_staff', r.data.user.user_metadata.staff_id); }catch(e){}
-  }
+  var meta = (r.data.user && r.data.user.user_metadata) || {};
+  if(meta.staff_id){ try{ localStorage.setItem('b777_staff', meta.staff_id); }catch(e){} }
   enterApp();
+}
+async function doReset(){
+  var email = gv('authEmail').trim().toLowerCase();
+  var a1 = gv('authA1').trim(), a2 = gv('authA2').trim(), np = gv('authNewPass');
+  if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)){ authMsg(1,'Enter the email you registered with.'); return; }
+  if(!a1 || !a2){ authMsg(1,'Answer both security questions.'); return; }
+  if(np.length < 6){ authMsg(1,'New password must be at least 6 characters.'); return; }
+  var btn = document.getElementById('authMainBtn');
+  btn.disabled = true; btn.textContent = 'Checking\u2026';
+  var r = await sb.functions.invoke('reset-password', { body: { email: email, a1: a1, a2: a2, new_password: np } });
+  btn.disabled = false; btn.textContent = 'Reset Password';
+  var err = r.error ? 'Reset service unavailable \u2014 tell the admin.' : (r.data && r.data.error) ? r.data.error : null;
+  if(err){ authMsg(1, err); return; }
+  authMsg(1,'Password reset! Sign in with your new password.', true);
+  authMode('signin');
+  authMsg(1,'Password reset \u2014 sign in with your new password.', true);
+}
+// ── activity heartbeat + profile touch ──
+var hbTimer = null;
+function startHeartbeat(){
+  if(hbTimer) return;
+  hbTimer = setInterval(function(){
+    if(document.visibilityState==='visible' && navigator.onLine && sb){
+      try{ sb.rpc('b777_heartbeat'); }catch(e){}
+    }
+  }, 60000);
+}
+async function touchProfile(){
+  try{
+    var s = await sb.auth.getSession();
+    if(!(s.data && s.data.session)) return;
+    var u = s.data.session.user;
+    var staff = (u.user_metadata && u.user_metadata.staff_id) || '';
+    await sb.from('b777_profiles').upsert({ user_id: u.id, staff_id: staff, email: u.email || '', last_seen: new Date().toISOString() }, { ignoreDuplicates: false });
+    if(u.app_metadata && u.app_metadata.b777_admin === true){
+      document.getElementById('adminCard').style.display = '';
+    }
+  }catch(e){}
 }
 async function signOut(){
   if(!confirm('Sign out on this device?')) return;
@@ -1416,6 +1512,7 @@ async function signOut(){
   location.reload();
 }
 function enterApp(){
+  touchProfile(); startHeartbeat();
   try{
     var st = localStorage.getItem('b777_staff');
     var w = document.getElementById('whoami');
@@ -1429,6 +1526,7 @@ async function initAuth(){
     var s = await sb.auth.getSession();
     if(s.data && s.data.session){ enterApp(); return; }
   }catch(e){ enterApp(); return; }
+  authMode('signin');
   show('auth');
 }
 
@@ -1531,6 +1629,7 @@ async function submitPost(){
 var CUR_POST = null;
 async function openPost(id){
   show('postview'); CUR_POST = id;
+  try{ sb.rpc('b777_post_view'); }catch(e){}
   document.getElementById('pvTitle').textContent = '…';
   document.getElementById('pvBody').textContent = '';
   document.getElementById('pvImgs').innerHTML = '';
@@ -1559,6 +1658,45 @@ async function submitComment(){
   var msg = document.getElementById('cmtMsg');
   if(r.error){ msg.className='auth-msg err'; msg.textContent='Failed: '+r.error.message; return; }
   msg.className='auth-msg'; inp.value=''; loadComments();
+}
+
+// ═══ Admin dashboard ═══
+function fmtDur(sec){
+  if(!sec) return '0m';
+  var hrs = Math.floor(sec/3600), m = Math.round((sec%3600)/60);
+  return hrs>0 ? hrs+'h '+m+'m' : m+'m';
+}
+function openAdmin(){ show('admin'); renderAdmin(); }
+async function renderAdmin(){
+  var today = new Date().toISOString().slice(0,10);
+  var d7 = new Date(Date.now()-7*86400000).toISOString().slice(0,10);
+  var todayStart = today + 'T00:00:00Z';
+  var profs = await sb.from('b777_profiles').select('*').order('last_seen',{ascending:false}).limit(500);
+  if(profs.error){ document.getElementById('adUserList').innerHTML = '<div class="empty-note">'+esc(profs.error.message)+'</div>'; return; }
+  var acts = await sb.from('b777_activity').select('*').gte('day', new Date(Date.now()-30*86400000).toISOString().slice(0,10)).limit(5000);
+  var actRows = acts.data || [];
+  var byUser = {}, activeToday = {}, active7 = {}, viewsToday = 0;
+  actRows.forEach(function(a){
+    byUser[a.user_id] = byUser[a.user_id] || { sec:0, views:0 };
+    byUser[a.user_id].sec += a.seconds; byUser[a.user_id].views += a.post_views;
+    if(a.day===today){ activeToday[a.user_id]=1; viewsToday += a.post_views; }
+    if(a.day>=d7) active7[a.user_id]=1;
+  });
+  document.getElementById('adUsers').textContent = profs.data.length;
+  document.getElementById('adActiveToday').textContent = Object.keys(activeToday).length;
+  document.getElementById('adActive7').textContent = Object.keys(active7).length;
+  document.getElementById('adViews').textContent = viewsToday;
+  var pAll = await sb.from('b777_sim_posts').select('id',{count:'exact',head:true});
+  var pToday = await sb.from('b777_sim_posts').select('id',{count:'exact',head:true}).gte('created_at', todayStart);
+  document.getElementById('adPosts').textContent = (pToday.count||0) + ' / ' + (pAll.count||0);
+  var mAll = await sb.from('b777_chat').select('id',{count:'exact',head:true});
+  var mToday = await sb.from('b777_chat').select('id',{count:'exact',head:true}).gte('created_at', todayStart);
+  document.getElementById('adMsgs').textContent = (mToday.count||0) + ' / ' + (mAll.count||0);
+  document.getElementById('adUserList').innerHTML = profs.data.length ? profs.data.map(function(p){
+    var a = byUser[p.user_id] || { sec:0, views:0 };
+    return '<div class="ad-row"><div><div class="au">'+esc(p.staff_id||'?')+'</div><div style="color:var(--sub);font-size:12px;">'+esc(p.email)+'</div></div>'
+      + '<div class="am">'+fmtDur(a.sec)+' · '+a.views+' views<br>last: '+fmtTime(p.last_seen)+'</div></div>';
+  }).join('') : '<div class="empty-note">No users yet.</div>';
 }
 
 setupServiceWorker();
