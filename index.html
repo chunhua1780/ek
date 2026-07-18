@@ -1426,7 +1426,7 @@ function authSubmit(){
   else doSignIn();
 }
 function gv(id){ return document.getElementById(id).value; }
-function staffEmail(staff){ return staff.toLowerCase() + '@b777crew.app'; }
+function staffEmail(staff){ return 'b777.' + staff.toLowerCase() + '@gmail.com'; }
 function staffOk(s){ return /^[a-zA-Z0-9]{3,12}$/.test(s); }
 async function doSignUp(){
   var staff = gv('authStaff').trim(), pass = gv('authPass');

@@ -1,4 +1,4 @@
-const CACHE = 'b777-v16';
+const CACHE = 'b777-v17';
 const ASSETS = ['./', './index.html', './questions.js', './supabase.js', './manifest.json', './icon192.png', './icon512.png'];
 
 self.addEventListener('install', function(e){
