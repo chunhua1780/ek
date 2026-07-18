@@ -539,6 +539,10 @@
         <div class="stat-box"><div class="n" id="adMsgs">–</div><div class="l">Chat msgs (today)</div></div>
         <div class="stat-box"><div class="n" id="adViews">–</div><div class="l">Post views today</div></div>
       </div>
+      <div class="stat-row" style="margin-top:10px;">
+        <div class="stat-box"><div class="n" id="adTimeToday">–</div><div class="l">Total time today</div></div>
+        <div class="stat-box"><div class="n" id="adAvg7">–</div><div class="l">Avg time / user (7d)</div></div>
+      </div>
     </div>
     <div class="card">
       <h2 style="font-size:16px;">Users</h2>
@@ -1686,6 +1690,14 @@ async function renderAdmin(){
   document.getElementById('adActiveToday').textContent = Object.keys(activeToday).length;
   document.getElementById('adActive7').textContent = Object.keys(active7).length;
   document.getElementById('adViews').textContent = viewsToday;
+  var secToday = 0, sec7 = 0;
+  actRows.forEach(function(a){
+    if(a.day===today) secToday += a.seconds;
+    if(a.day>=d7) sec7 += a.seconds;
+  });
+  var n7 = Object.keys(active7).length;
+  document.getElementById('adTimeToday').textContent = fmtDur(secToday);
+  document.getElementById('adAvg7').textContent = n7 ? fmtDur(Math.round(sec7/n7)) : '0m';
   var pAll = await sb.from('b777_sim_posts').select('id',{count:'exact',head:true});
   var pToday = await sb.from('b777_sim_posts').select('id',{count:'exact',head:true}).gte('created_at', todayStart);
   document.getElementById('adPosts').textContent = (pToday.count||0) + ' / ' + (pAll.count||0);
