@@ -456,6 +456,7 @@
 
     <div class="install-hint" id="installHint">💡 Add this page to your Home Screen / Desktop — the whole app and question bank then work fully offline.</div>
     <a class="footer-link" href="#" onclick="openReportIssue(null);return false;">🚩 Report an error in the question bank</a>
+    <a class="footer-link" href="#" onclick="openFeedback();return false;">💡 Feedback &amp; suggestions</a>
     <a class="footer-link" href="#" onclick="signOut();return false;">👤 <span id="whoami">Signed in</span> &middot; Sign out</a>
   </div>
 
@@ -533,6 +534,18 @@
     </div>
   </div>
 
+  <!-- FEEDBACK -->
+  <div class="screen" id="feedback">
+    <button class="back-link" onclick="show('home')">‹ Back</button>
+    <div class="card">
+      <h2>Feedback 💡</h2>
+      <p class="desc">Found a bug? Want a feature? Question bank error? Tell the admin — every message is read.</p>
+      <textarea class="auth-input" id="fbText" maxlength="2000" placeholder="Write anything — what's broken, what's missing, what would make this app better for you…"></textarea>
+      <div class="auth-msg" id="fbMsg"></div>
+      <button class="big-btn" id="fbBtn" onclick="submitFeedback()">Send Feedback</button>
+    </div>
+  </div>
+
   <!-- ADMIN -->
   <div class="screen" id="admin">
     <button class="back-link" onclick="show('home')">‹ Back</button>
@@ -557,6 +570,10 @@
     <div class="card">
       <h2 style="font-size:16px;">Users</h2>
       <div id="adUserList"><div class="empty-note">Loading…</div></div>
+    </div>
+    <div class="card">
+      <h2 style="font-size:16px;">Feedback 💡</h2>
+      <div id="adFeedback"><div class="empty-note">Loading…</div></div>
     </div>
   </div>
 
@@ -1789,6 +1806,28 @@ async function submitComment(){
   msg.className='auth-msg'; inp.value=''; loadComments();
 }
 
+// ═══ Feedback ═══
+function openFeedback(){
+  document.getElementById('fbText').value = '';
+  var el = document.getElementById('fbMsg'); el.className='auth-msg'; el.textContent='';
+  show('feedback');
+}
+async function submitFeedback(){
+  var t = document.getElementById('fbText').value.trim();
+  var msg = document.getElementById('fbMsg');
+  if(t.length < 3){ msg.className='auth-msg err'; msg.textContent='Write a little more first.'; return; }
+  if(!navigator.onLine){ msg.className='auth-msg err'; msg.textContent='You are offline — try again when connected.'; return; }
+  var btn = document.getElementById('fbBtn');
+  btn.disabled = true; btn.textContent = 'Sending…';
+  var staff = '';
+  try{ staff = localStorage.getItem('b777_staff') || ''; }catch(e){}
+  var r = await sb.from('b777_feedback').insert({ text: t.slice(0,2000), staff_id: staff });
+  btn.disabled = false; btn.textContent = 'Send Feedback';
+  if(r.error){ msg.className='auth-msg err'; msg.textContent='Failed: '+r.error.message; return; }
+  msg.className='auth-msg ok'; msg.textContent='Sent — thank you! 🙏';
+  document.getElementById('fbText').value = '';
+}
+
 // ═══ Admin dashboard ═══
 function fmtDur(sec){
   if(!sec) return '0m';
@@ -1836,6 +1875,12 @@ async function renderAdmin(){
     return '<div class="ad-row"><div><div class="au">'+esc(p.staff_id||'?')+'</div><div style="color:var(--sub);font-size:12px;">joined '+fmtTime(p.created_at)+'</div></div>'
       + '<div class="am">'+fmtDur(a.sec)+' · '+a.views+' views<br>last: '+fmtTime(p.last_seen)+'</div></div>';
   }).join('') : '<div class="empty-note">No users yet.</div>';
+  var fb = await sb.from('b777_feedback').select('*').order('created_at',{ascending:false}).limit(50);
+  var fbEl = document.getElementById('adFeedback');
+  if(fb.error){ fbEl.innerHTML = '<div class="empty-note">'+esc(fb.error.message)+'</div>'; }
+  else fbEl.innerHTML = (fb.data && fb.data.length) ? fb.data.map(function(f){
+    return '<div class="comment"><div class="cm">'+esc(f.staff_id||'?')+' · '+fmtTime(f.created_at)+'</div><div class="ct">'+esc(f.text)+'</div></div>';
+  }).join('') : '<div class="empty-note">No feedback yet.</div>';
 }
 
 setupServiceWorker();
