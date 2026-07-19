@@ -353,7 +353,7 @@
       </div>
       <div class="card">
         <label class="auth-label">Staff Number</label>
-        <input class="auth-input" id="authStaff" inputmode="numeric" autocomplete="username" placeholder="e.g. 467988">
+        <input class="auth-input" id="authStaff" inputmode="numeric" autocomplete="username" placeholder="e.g. 666666">
         <div class="af af-signin af-signup">
           <label class="auth-label">Password</label>
           <input class="auth-input" id="authPass" type="password" autocomplete="current-password" placeholder="At least 6 characters" onkeydown="if(event.key==='Enter'&&AUTH_MODE==='signin'){doSignIn();}">
@@ -437,9 +437,9 @@
         <div><div class="t">Mistake Bank</div><div class="d" id="wrongBankDesc">Drill the questions you keep getting wrong</div></div>
         <div class="arrow">›</div>
       </button>
-      <button class="mode-btn lounge" onclick="openLounge()">
+      <button class="mode-btn lounge" onclick="openForum()">
         <div class="ic">💬</div>
-        <div><div class="t">Pilot Lounge</div><div class="d">Anonymous open chat with fellow pilots</div></div>
+        <div><div class="t">Pilot Forum</div><div class="d">Open forum — post, reply, share pictures. Any nickname you like</div></div>
         <div class="arrow">›</div>
       </button>
       <button class="mode-btn simnotes" onclick="openSimNotes()">
@@ -459,9 +459,22 @@
     <a class="footer-link" href="#" onclick="signOut();return false;">👤 <span id="whoami">Signed in</span> &middot; Sign out</a>
   </div>
 
+  <!-- PILOT FORUM -->
+  <div class="screen" id="forum">
+    <button class="back-link" onclick="show('home')">‹ Back</button>
+    <div class="card">
+      <h2>Pilot Forum 💬</h2>
+      <p class="desc">Say anything, ask anything, share pictures — old-school forum style. Pick any nickname; nobody sees who you are.</p>
+      <div class="nick-row">Posting as <input class="auth-input" id="nickInput3" maxlength="20" placeholder="Anonymous" onchange="saveNick(3)"></div>
+      <button class="big-btn" onclick="openNewPost('forum')">＋ New post</button>
+      <a class="footer-link" href="#" onclick="openLounge();return false;">⚡ Live chat room ›</a>
+    </div>
+    <div id="postListF"><div class="empty-note">Loading…</div></div>
+  </div>
+
   <!-- PILOT LOUNGE -->
   <div class="screen" id="lounge">
-    <button class="back-link" onclick="show('home')">‹ Back</button>
+    <button class="back-link" onclick="openForum()">‹ Back</button>
     <div class="card">
       <h2>Pilot Lounge 💬</h2>
       <p class="desc">Open chat for B777 pilots. Stay anonymous or pick a nickname. Keep it friendly — no real names, no confidential company material.</p>
@@ -481,22 +494,22 @@
       <h2>Sim Notes 🛫</h2>
       <p class="desc">Just flew the sim? Share your debrief so the next crew knows what came up and what to watch out for.</p>
       <div class="nick-row">Posting as <input class="auth-input" id="nickInput2" maxlength="20" placeholder="Anonymous" onchange="saveNick(2)"></div>
-      <button class="big-btn" onclick="openNewPost()">＋ Share your sim notes</button>
+      <button class="big-btn" onclick="openNewPost('sim')">＋ Share your sim notes</button>
     </div>
     <div id="postList"><div class="empty-note">Loading…</div></div>
   </div>
 
   <!-- NEW POST -->
   <div class="screen" id="newpost">
-    <button class="back-link" onclick="show('simnotes');loadPosts()">‹ Back</button>
+    <button class="back-link" onclick="backToList()">‹ Back</button>
     <div class="card">
-      <h2>Share sim notes</h2>
+      <h2 id="npTitle">Share sim notes</h2>
       <label class="auth-label">Title</label>
       <input class="auth-input" id="postTitle" maxlength="120" placeholder="e.g. OPC/LPC — engine fire + windshear at rotation">
       <label class="auth-label">Your notes</label>
       <textarea class="auth-input" id="postBody" maxlength="8000" placeholder="Scenarios that came up, gotchas, examiner focus areas, things to brush up on…"></textarea>
-      <label class="auth-label">Photos (optional, up to 3)</label>
-      <input class="auth-input" type="file" id="postImgs" accept="image/*" multiple>
+      <label class="auth-label">Photos / PDF files (optional, up to 3)</label>
+      <input class="auth-input" type="file" id="postImgs" accept="image/*,application/pdf" multiple>
       <div class="auth-msg" id="postMsg"></div>
       <button class="big-btn" id="postSubmitBtn" onclick="submitPost()">Post</button>
     </div>
@@ -504,7 +517,7 @@
 
   <!-- POST VIEW -->
   <div class="screen" id="postview">
-    <button class="back-link" onclick="show('simnotes');loadPosts()">‹ Back</button>
+    <button class="back-link" onclick="backToList()">‹ Back</button>
     <div class="card">
       <h2 id="pvTitle"></h2>
       <p class="desc" id="pvMeta" style="margin-bottom:0;"></p>
@@ -1629,10 +1642,12 @@ async function enforceDeviceLimit(){
 var NICK_KEY = 'b777_nick';
 function getNick(){ try{ return (localStorage.getItem(NICK_KEY)||'').trim(); }catch(e){ return ''; } }
 function saveNick(n){
-  var v = document.getElementById(n===2?'nickInput2':'nickInput').value.trim().slice(0,20);
+  var src = n===2 ? 'nickInput2' : n===3 ? 'nickInput3' : 'nickInput';
+  var v = document.getElementById(src).value.trim().slice(0,20);
   try{ localStorage.setItem(NICK_KEY, v); }catch(e){}
-  var a=document.getElementById('nickInput'), b=document.getElementById('nickInput2');
-  if(a) a.value=v; if(b) b.value=v;
+  ['nickInput','nickInput2','nickInput3'].forEach(function(id){
+    var el = document.getElementById(id); if(el) el.value = v;
+  });
 }
 function dispName(x){ return x && x.trim() ? x.trim() : 'Anonymous'; }
 function fmtTime(iso){
@@ -1681,21 +1696,33 @@ async function sendChat(){
 }
 
 // ── Sim Notes ──
+var CUR_CAT = 'sim';
 function openSimNotes(){
+  CUR_CAT = 'sim';
   document.getElementById('nickInput2').value = getNick();
   show('simnotes'); loadPosts();
 }
+function openForum(){
+  CUR_CAT = 'forum';
+  document.getElementById('nickInput3').value = getNick();
+  show('forum'); loadPosts();
+}
+function backToList(){
+  show(CUR_CAT==='forum' ? 'forum' : 'simnotes'); loadPosts();
+}
 async function loadPosts(){
-  var el = document.getElementById('postList');
+  var el = document.getElementById(CUR_CAT==='forum' ? 'postListF' : 'postList');
   if(!navigator.onLine){ el.innerHTML='<div class="empty-note">You are offline.</div>'; return; }
-  var r = await sb.from('b777_sim_posts').select('*').order('created_at',{ascending:false}).limit(50);
+  var r = await sb.from('b777_sim_posts').select('*').eq('category', CUR_CAT).order('created_at',{ascending:false}).limit(50);
   if(r.error){ el.innerHTML='<div class="empty-note">Could not load ('+esc(r.error.message)+')</div>'; return; }
   el.innerHTML = r.data.length ? r.data.map(function(p){
     return '<button class="post-item" onclick="openPost(\''+p.id+'\')"><div class="pt">'+esc(p.title)+'</div><div class="pm">'+esc(dispName(p.nickname))+' · '+fmtTime(p.created_at)+'</div><div class="pp">'+esc(p.body||'')+'</div></button>';
-  }).join('') : '<div class="empty-note">No sim notes yet — be the first to share after your next sim! 🛫</div>';
+  }).join('') : (CUR_CAT==='forum' ? '<div class="empty-note">No posts yet — start the first thread! 💬</div>' : '<div class="empty-note">No sim notes yet — be the first to share after your next sim! 🛫</div>');
 }
 function postMsgSet(t, ok){ var el=document.getElementById('postMsg'); el.className='auth-msg '+(t?(ok?'ok':'err'):''); el.textContent=t||''; }
-function openNewPost(){
+function openNewPost(cat){
+  if(cat) CUR_CAT = cat;
+  document.getElementById('npTitle').textContent = CUR_CAT==='forum' ? 'New forum post' : 'Share sim notes';
   document.getElementById('postTitle').value='';
   document.getElementById('postBody').value='';
   document.getElementById('postImgs').value='';
@@ -1711,15 +1738,16 @@ async function submitPost(){
   var imgs = []; var files = document.getElementById('postImgs').files;
   for(var i=0;i<Math.min(files.length,3);i++){
     var f = files[i];
+    if(f.size > 10*1024*1024){ btn.disabled=false; btn.textContent='Post'; postMsgSet('"'+f.name+'" is over 10 MB — please use a smaller file.'); return; }
     var path = Date.now()+'-'+i+'-'+f.name.replace(/[^a-zA-Z0-9_.-]/g,'_');
-    var up = await sb.storage.from('simnotes').upload(path, f);
-    if(up.error){ btn.disabled=false; btn.textContent='Post'; postMsgSet('Photo upload failed: '+up.error.message); return; }
+    var up = await sb.storage.from('simnotes').upload(path, f, { contentType: f.type || 'application/octet-stream' });
+    if(up.error){ btn.disabled=false; btn.textContent='Post'; postMsgSet('Upload failed: '+up.error.message); return; }
     imgs.push(sb.storage.from('simnotes').getPublicUrl(path).data.publicUrl);
   }
-  var r = await sb.from('b777_sim_posts').insert({ title:title.slice(0,120), body:body.slice(0,8000), nickname:getNick(), images:imgs });
+  var r = await sb.from('b777_sim_posts').insert({ title:title.slice(0,120), body:body.slice(0,8000), nickname:getNick(), images:imgs, category: CUR_CAT });
   btn.disabled=false; btn.textContent='Post';
   if(r.error){ postMsgSet('Post failed: '+r.error.message); return; }
-  show('simnotes'); loadPosts();
+  backToList();
 }
 var CUR_POST = null;
 async function openPost(id){
@@ -1735,7 +1763,13 @@ async function openPost(id){
   document.getElementById('pvTitle').textContent = p.title;
   document.getElementById('pvMeta').textContent = dispName(p.nickname)+' · '+fmtTime(p.created_at);
   document.getElementById('pvBody').textContent = p.body || '';
-  document.getElementById('pvImgs').innerHTML = (p.images||[]).map(function(u){ return '<img class="post-img" src="'+esc(u)+'" loading="lazy">'; }).join('');
+  document.getElementById('pvImgs').innerHTML = (p.images||[]).map(function(u){
+    if(/\.pdf(\?|$)/i.test(u)){
+      var nm = decodeURIComponent(u.split('/').pop().split('?')[0]).replace(/^\d+-\d+-/,'');
+      return '<a class="post-item" style="margin-top:10px;" href="'+esc(u)+'" target="_blank" rel="noopener"><div class="pt">📄 '+esc(nm)+'</div><div class="pm">Tap to open PDF</div></a>';
+    }
+    return '<img class="post-img" src="'+esc(u)+'" loading="lazy">';
+  }).join('');
   loadComments();
 }
 async function loadComments(){
