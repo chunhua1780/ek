@@ -1,0 +1,14 @@
+{
+  "name": "B777 题库练习",
+  "short_name": "B777题库",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#0a2540",
+  "theme_color": "#0a2540",
+  "icons": [
+    { "src": "icon192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icon512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icon-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
