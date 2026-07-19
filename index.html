@@ -454,7 +454,16 @@
       </button>
     </div>
 
-    <div class="install-hint" id="installHint">💡 Add this page to your Home Screen / Desktop — the whole app and question bank then work fully offline.</div>
+    <div class="card" id="offlineCard" style="margin-top:14px;padding:14px 16px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
+        <div>
+          <div style="font-weight:700;font-size:14.5px;">Offline mode 📦</div>
+          <div style="font-size:12.5px;color:var(--sub);margin-top:2px;" id="offlineStatus">Checking…</div>
+        </div>
+        <button class="big-btn" id="offlineBtn" style="width:auto;padding:10px 16px;font-size:13.5px;" onclick="downloadOffline()">Download offline data</button>
+      </div>
+      <div class="install-hint" id="installHint" style="margin-top:8px;">💡 Add this page to your Home Screen / Desktop, tap the button once, and the full question bank works with no internet.</div>
+    </div>
     <a class="footer-link" href="#" onclick="openReportIssue(null);return false;">🚩 Report an error in the question bank</a>
     <a class="footer-link" href="#" onclick="openFeedback();return false;">💡 Feedback &amp; suggestions</a>
     <a class="footer-link" href="#" onclick="signOut();return false;">👤 <span id="whoami">Signed in</span> &middot; Sign out</a>
@@ -1551,6 +1560,7 @@ async function signOut(){
   location.reload();
 }
 function enterApp(){
+  setTimeout(checkOffline, 300);
   enforceDeviceLimit().then(function(ok){ if(ok) cloudPull(); });
   touchProfile(); startHeartbeat();
   try{
@@ -1804,6 +1814,50 @@ async function submitComment(){
   var msg = document.getElementById('cmtMsg');
   if(r.error){ msg.className='auth-msg err'; msg.textContent='Failed: '+r.error.message; return; }
   msg.className='auth-msg'; inp.value=''; loadComments();
+}
+
+// ═══ Offline download ═══
+var OFFLINE_ASSETS = ['./', './index.html', './questions.js', './supabase.js', './manifest.json', './icon192.png', './icon512.png'];
+async function offlineCacheName(){
+  var keys = await caches.keys();
+  var mine = keys.filter(function(k){ return k.indexOf('b777-')===0; }).sort();
+  return mine.length ? mine[mine.length-1] : 'b777-manual';
+}
+async function checkOffline(){
+  var st = document.getElementById('offlineStatus');
+  if(!('caches' in window)){ st.textContent = 'Not supported in this browser.'; document.getElementById('offlineBtn').style.display='none'; return; }
+  try{
+    var c = await caches.open(await offlineCacheName());
+    var q = await c.match('./questions.js', {ignoreSearch:true});
+    var i = await c.match('./index.html', {ignoreSearch:true});
+    if(q && i){
+      st.textContent = '✅ Ready — all 964 questions work without internet on this device.';
+      document.getElementById('offlineBtn').textContent = 'Re-download';
+    } else {
+      st.textContent = 'Not downloaded yet on this device.';
+    }
+  }catch(e){ st.textContent = 'Status unknown — tap Download to be safe.'; }
+}
+async function downloadOffline(){
+  var btn = document.getElementById('offlineBtn'), st = document.getElementById('offlineStatus');
+  if(!navigator.onLine){ st.textContent = 'You are offline — connect to the internet to download.'; return; }
+  btn.disabled = true;
+  try{
+    var c = await caches.open(await offlineCacheName());
+    for(var i=0;i<OFFLINE_ASSETS.length;i++){
+      btn.textContent = 'Downloading… ' + (i+1) + '/' + OFFLINE_ASSETS.length;
+      var resp = await fetch(OFFLINE_ASSETS[i], {cache:'reload'});
+      if(!resp.ok) throw new Error('HTTP '+resp.status+' on '+OFFLINE_ASSETS[i]);
+      await c.put(OFFLINE_ASSETS[i], resp);
+    }
+    if('serviceWorker' in navigator){ try{ navigator.serviceWorker.register('sw.js'); }catch(e){} }
+    st.textContent = '✅ Done — this device now works fully offline. Test it in airplane mode!';
+    btn.textContent = 'Re-download';
+  }catch(e){
+    st.textContent = 'Download failed ('+e.message+') — check your connection and try again.';
+    btn.textContent = 'Download offline data';
+  }
+  btn.disabled = false;
 }
 
 // ═══ Feedback ═══
