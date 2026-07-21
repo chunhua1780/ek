@@ -983,10 +983,21 @@ var SETUP_CAT = 'all';
 var SETUP_COUNT = 30;
 var SMART_ON = true;
 
+function makePerm(q){
+  // Random display order of this question's options — kills muscle memory.
+  var ls = ['A','B','C','D'].filter(function(l){ return q.options && q.options[l]; });
+  for(var i=ls.length-1;i>0;i--){ var j = Math.floor(Math.random()*(i+1)); var t=ls[i]; ls[i]=ls[j]; ls[j]=t; }
+  return ls;
+}
+function dispOf(st, orig){
+  if(!st || !st.perm || orig==null) return orig;
+  var i = st.perm.indexOf(orig);
+  return i < 0 ? orig : 'ABCD'.charAt(i);
+}
 function newSession(mode, instant, catKey, list, label){
   SESSION = {
     mode:mode, instant:instant, catKey:catKey, list:list, idx:0, finished:false, results:[],
-    states:list.map(function(){ return {chosen:null, flagged:false, revealed:false, graded:false}; })
+    states:list.map(function(q){ return {chosen:null, flagged:false, revealed:false, graded:false, perm: makePerm(q)}; })
   };
   document.getElementById('quizCatChip').textContent = label;
   document.getElementById('finishBtn').textContent = mode==='exam' ? 'End Exam' : 'End Practice';
@@ -1155,7 +1166,7 @@ function updateNav(){
       stTxt = '—';
     } else if(st.chosen!==null){
       cell.classList.add('done');
-      stTxt = st.chosen;
+      stTxt = dispOf(st, st.chosen);
     }
     if(st.flagged && !SESSION.finished) cell.classList.add('flag');
     if(i===SESSION.idx) cell.classList.add('cur');
@@ -1212,19 +1223,20 @@ function renderQuestion(){
 
   var list = document.getElementById('ansList');
   list.innerHTML = '';
-  ['A','B','C','D'].forEach(function(letter){
-    if(!q.options[letter]) return;
+  (st.perm || ['A','B','C','D']).forEach(function(orig, i){
+    if(!q.options[orig]) return;
+    var dispLetter = 'ABCD'.charAt(i);
     var btn = document.createElement('button');
     btn.className = 'ans-btn';
-    btn.innerHTML = '<span class="lt">'+letter+'</span><span>'+escapeHtml(q.options[letter])+'</span>';
+    btn.innerHTML = '<span class="lt">'+dispLetter+'</span><span>'+escapeHtml(q.options[orig])+'</span>';
     if(graded){
       btn.disabled = true;
-      if(letter === q.answer) btn.classList.add('correct');
-      else if(letter === st.chosen) btn.classList.add('wrong');
+      if(orig === q.answer) btn.classList.add('correct');
+      else if(orig === st.chosen) btn.classList.add('wrong');
       else btn.classList.add('dim');
     } else {
-      if(letter === st.chosen) btn.classList.add('picked');
-      btn.onclick = function(){ pickAnswer(letter); };
+      if(orig === st.chosen) btn.classList.add('picked');
+      btn.onclick = function(){ pickAnswer(orig); };
     }
     list.appendChild(btn);
   });
@@ -1309,7 +1321,7 @@ function finishExam(force){
     var correct = st.chosen === q.answer;
     if(st.chosen!==null && !st.graded){ gradeSM2(q.id, correct); st.graded = true; }
     st.revealed = true;
-    SESSION.results.push({ q:q, chosen:st.chosen, correct:correct });
+    SESSION.results.push({ q:q, chosen:st.chosen, chosenDisp: dispOf(st, st.chosen), ansDisp: dispOf(st, q.answer), correct:correct });
   });
   SESSION.finished = true;
   bumpStreak();
@@ -1344,12 +1356,12 @@ function showResults(){
       div.className = 'wrong-item';
       var yourLine = r.chosen===null
         ? '<div class="line bad">Your answer: — (unanswered)</div>'
-        : '<div class="line bad">Your answer: '+r.chosen+'. '+escapeHtml(r.q.options[r.chosen]||'')+'</div>';
+        : '<div class="line bad">Your answer: '+(r.chosenDisp||r.chosen)+'. '+escapeHtml(r.q.options[r.chosen]||'')+'</div>';
       div.innerHTML =
         '<div class="qid">Question ID - '+r.q.id+'</div>' +
         '<div class="qtext">'+escapeHtml(r.q.question)+'</div>' +
         yourLine +
-        '<div class="line good">Correct answer: '+r.q.answer+'. '+escapeHtml(r.q.options[r.q.answer]||'')+'</div>' +
+        '<div class="line good">Correct answer: '+(r.ansDisp||r.q.answer)+'. '+escapeHtml(r.q.options[r.q.answer]||'')+'</div>' +
         (r.q.reference ? '<div class="ref">Reference: '+escapeHtml(r.q.reference)+'</div>' : '');
       listEl.appendChild(div);
     });
