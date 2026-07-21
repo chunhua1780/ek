@@ -464,7 +464,7 @@
         </div>
         <button class="big-btn" id="offlineBtn" style="width:auto;padding:10px 16px;font-size:13.5px;" onclick="downloadOffline()">Download offline data</button>
       </div>
-      <div class="install-hint" id="installHint" style="margin-top:8px;">💡 Add this page to your Home Screen / Desktop, tap the button once, and the full question bank works with no internet.</div>
+      <div class="install-hint" id="installHint" style="margin-top:8px;">💡 Install to your Home Screen / Desktop and open it once with internet — everything downloads automatically and the app then opens fully offline. When you're back online it silently updates itself.</div>
     </div>
     <a class="footer-link" href="#" onclick="openReportIssue(null);return false;">🚩 Report an error in the question bank</a>
     <a class="footer-link" href="#" onclick="openFeedback();return false;">💡 Feedback &amp; suggestions</a>
@@ -1859,6 +1859,10 @@ async function checkOffline(){
     if(q && i){
       st.textContent = '✅ Ready — all 964 questions work without internet on this device.';
       document.getElementById('offlineBtn').textContent = 'Re-download';
+    } else if(navigator.onLine && !window.__autoDl){
+      window.__autoDl = true;
+      st.textContent = 'Downloading offline data automatically\u2026';
+      downloadOffline();
     } else {
       st.textContent = 'Not downloaded yet on this device.';
     }
