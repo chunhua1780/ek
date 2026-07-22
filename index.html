@@ -615,93 +615,81 @@
     </div>
   </div>
 
-  <!-- FLIGHT CALCULATOR (Comprehensive Professional) -->
+  <!-- FLIGHT CALCULATOR (Real-time Auto-Calculation) -->
   <div class="screen" id="calc">
     <button class="back-link" onclick="show('home')">‹ Back</button>
     <div class="card">
       <h2>Advanced Flight Planning 🦮</h2>
-      <p class="desc">Complete calculation: IAS→TAS→GS→DA→RNP descent with all corrections (verified formulas)</p>
+      <p class="desc">Real-time calculation: Enter data → all results auto-compute (ICAO verified)</p>
     </div>
 
-    <!-- STEP 1: Altitude Pressure Corrections -->
+    <!-- INPUT SECTION: Altitude & Atmosphere -->
     <div class="calc-section">
-      <div class="title">Step 1: Altitude Corrections (PA, DA)</div>
+      <div class="title">Atmosphere & Altitude</div>
       <div class="calc-row">
         <div class="calc-input">
-          <label>Altimeter Setting QNH</label>
-          <input type="number" id="qnh1" placeholder="29.92" step="0.01" oninput="calcStep1()">
+          <label>QNH (auto-detect: 29.92/1013)</label>
+          <input type="number" id="qnh" placeholder="29.92" step="0.01" oninput="calcAll()">
         </div>
         <div class="calc-input">
-          <label>Unit</label>
-          <select id="qnhUnit1" onchange="calcStep1()" style="padding:8px 10px;border:1px solid var(--border);border-radius:8px;background:var(--card);color:var(--text);">
-            <option value="inhg">inHg</option>
-            <option value="hpa">hPa</option>
-            <option value="mmhg">mmHg</option>
-          </select>
+          <label>Indicated Alt (ft)</label>
+          <input type="number" id="indAlt" placeholder="0" oninput="calcAll()">
         </div>
       </div>
       <div class="calc-row">
         <div class="calc-input">
-          <label>Indicated Altitude (feet)</label>
-          <input type="number" id="indAlt1" placeholder="0" oninput="calcStep1()">
+          <label>OAT (°C)</label>
+          <input type="number" id="oat" placeholder="0" oninput="calcAll()">
         </div>
         <div class="calc-input">
-          <label>OAT Temperature (°C)</label>
-          <input type="number" id="oat1" placeholder="0" oninput="calcStep1()">
+          <label>IAS (knots)</label>
+          <input type="number" id="ias" placeholder="0" oninput="calcAll()">
         </div>
-      </div>
-      <div class="calc-result">
-        <div><span class="label">Pressure Altitude (PA):</span> <span class="value" id="paResult">─</span></div>
-        <div><span class="label">Density Altitude (DA):</span> <span class="value" id="daResult">─</span></div>
       </div>
     </div>
 
-    <!-- STEP 2: IAS to TAS -->
+    <!-- INPUT SECTION: Navigation & Wind -->
     <div class="calc-section">
-      <div class="title">Step 2: IAS → TAS Conversion (using PA & OAT)</div>
+      <div class="title">Final Track & Wind Correction</div>
       <div class="calc-row">
         <div class="calc-input">
-          <label>Indicated Air Speed (IAS, knots)</label>
-          <input type="number" id="ias2" placeholder="250" oninput="calcStep2()">
+          <label>Final Approach Track (°, e.g. 180)</label>
+          <input type="number" id="finalTrack" placeholder="180" min="0" max="360" oninput="calcAll()">
         </div>
+        <div class="calc-input">
+          <label>Wind Direction (°FROM)</label>
+          <input type="number" id="windDir" placeholder="270" min="0" max="360" oninput="calcAll()">
+        </div>
+      </div>
+      <div class="calc-row">
         <div class="calc-input">
           <label>Wind Speed (knots)</label>
-          <input type="number" id="wind2" placeholder="0" oninput="calcStep2()">
+          <input type="number" id="windSpeed" placeholder="0" oninput="calcAll()">
+        </div>
+        <div class="calc-input">
+          <label>Runway Threshold Temp (°C)</label>
+          <input type="number" id="rwyTemp" placeholder="15" oninput="calcAll()">
+        </div>
+      </div>
+    </div>
+
+    <!-- RNP SETTINGS -->
+    <div class="calc-section">
+      <div class="title">RNP Approach Settings</div>
+      <div class="calc-row">
+        <div class="calc-input">
+          <label>Standard Approach Angle (°)</label>
+          <input type="number" id="stdAngle" placeholder="3.0" step="0.1" oninput="calcAll()">
+        </div>
+        <div class="calc-input">
+          <label>Distance to Runway (NM)</label>
+          <input type="number" id="distRwy" placeholder="0" oninput="calcAll()">
         </div>
       </div>
       <div class="calc-row full">
         <div class="calc-input">
-          <label>Wind Direction</label>
-          <select id="windDir2" onchange="calcStep2()" style="padding:8px 10px;border:1px solid var(--border);border-radius:8px;background:var(--card);color:var(--text);">
-            <option value="0">Headwind</option>
-            <option value="1">Tailwind</option>
-          </select>
-        </div>
-      </div>
-      <div class="calc-result">
-        <div><span class="label">True Air Speed (TAS):</span> <span class="value" id="tasResult">─</span></div>
-        <div><span class="label">Ground Speed (GS):</span> <span class="value" id="gsResult">─</span></div>
-        <div><span class="label">Density Ratio (σ):</span> <span class="value" id="sigmaResult">─</span></div>
-      </div>
-    </div>
-
-    <!-- STEP 3: Temperature-Corrected RNP Descent -->
-    <div class="calc-section">
-      <div class="title">Step 3: RNP Approach (Temperature-Corrected Descent)</div>
-      <div class="calc-row">
-        <div class="calc-input">
-          <label>Standard Approach Angle (°, typical 3.0)</label>
-          <input type="number" id="stdAngle3" placeholder="3.0" step="0.1" oninput="calcStep3()">
-        </div>
-        <div class="calc-input">
-          <label>Runway Threshold Temp (°C, std=15)</label>
-          <input type="number" id="rwyTemp3" placeholder="15" oninput="calcStep3()">
-        </div>
-      </div>
-      <div class="calc-row">
-        <div class="calc-input">
           <label>RNP Level</label>
-          <select id="rnpLevel3" onchange="calcStep3()" style="padding:8px 10px;border:1px solid var(--border);border-radius:8px;background:var(--card);color:var(--text);">
+          <select id="rnpLevel" onchange="calcAll()" style="padding:8px 10px;border:1px solid var(--border);border-radius:8px;background:var(--card);color:var(--text);">
             <option value="0.1">RNP 0.1</option>
             <option value="0.3">RNP 0.3</option>
             <option value="0.5">RNP 0.5</option>
@@ -710,29 +698,51 @@
             <option value="4">RNP 4</option>
           </select>
         </div>
-        <div class="calc-input">
-          <label>Distance to Runway (NM)</label>
-          <input type="number" id="distRwy3" placeholder="0" oninput="calcStep3()">
-        </div>
-      </div>
-      <div class="calc-result">
-        <div><span class="label">Temperature Deviation:</span> <span class="value" id="tempDev3">─</span></div>
-        <div><span class="label">Corrected Approach Angle:</span> <span class="value" id="corrAngle3">─</span></div>
-        <div><span class="label">Required Descent Rate (fpm):</span> <span class="value" id="rodResult3">─</span></div>
-        <div><span class="label">Approach Time (min):</span> <span class="value" id="approachTime3">─</span></div>
-        <div><span class="label">RNP Tolerance (±):</span> <span class="value" id="rnpTol3">─</span></div>
       </div>
     </div>
 
-    <div style="padding:12px;background:rgba(100,200,50,.1);border-radius:10px;margin-top:14px;font-size:12px;line-height:1.6;color:var(--sub);">
-      <b>Formula Reference (ICAO/FAA verified):</b><br>
-      1. PA = (29.92 - QNH inHg) × 1000 + Indicated Alt<br>
-      2. DA = PA + (OAT - ISA Temp @ PA) × 120<br>
-      3. σ = (T/288.15)^4.256 × (P/P₀)^5.256 [ISA troposphere]<br>
-      4. TAS = IAS / √σ<br>
-      5. GS = TAS ± Wind<br>
-      6. Corrected Angle = Standard Angle + (ΔT × 0.02°) [per ICAO: 0.3°/15°C]<br>
-      7. ROD (fpm) = GS × tan(Angle) × 101.3
+    <!-- OUTPUT: AUTO-CALCULATED RESULTS -->
+    <div class="calc-section">
+      <div class="title">Calculated Results (Auto-Updated)</div>
+      <div class="calc-result">
+        <div style="border-bottom:1px solid var(--border);padding-bottom:10px;margin-bottom:10px;">
+          <b>Altitude Corrections:</b>
+          <div><span class="label">QNH (inHg/hPa):</span> <span class="value" id="rQnh">─</span></div>
+          <div><span class="label">Pressure Altitude:</span> <span class="value" id="rPA">─</span></div>
+          <div><span class="label">Density Altitude:</span> <span class="value" id="rDA">─</span></div>
+        </div>
+        
+        <div style="border-bottom:1px solid var(--border);padding-bottom:10px;margin-bottom:10px;">
+          <b>Airspeed Conversions:</b>
+          <div><span class="label">True Air Speed:</span> <span class="value" id="rTAS">─</span></div>
+          <div><span class="label">Density Ratio (σ):</span> <span class="value" id="rSigma">─</span></div>
+        </div>
+
+        <div style="border-bottom:1px solid var(--border);padding-bottom:10px;margin-bottom:10px;">
+          <b>Wind & Navigation:</b>
+          <div><span class="label">Wind Angle to Track:</span> <span class="value" id="rWindAngle">─</span></div>
+          <div><span class="label">Wind Correction Angle (WCA):</span> <span class="value" id="rWCA">─</span></div>
+          <div><span class="label">True Heading to Fly:</span> <span class="value" id="rHeading">─</span></div>
+          <div><span class="label">Ground Speed (GS):</span> <span class="value" id="rGS">─</span></div>
+          <div><span class="label">Headwind/Tailwind Component:</span> <span class="value" id="rWindComp">─</span></div>
+        </div>
+
+        <div style="border-bottom:1px solid var(--border);padding-bottom:10px;margin-bottom:10px;">
+          <b>RNP Approach (Temperature-Corrected):</b>
+          <div><span class="label">Temp Deviation:</span> <span class="value" id="rTempDev">─</span></div>
+          <div><span class="label">Corrected Approach Angle:</span> <span class="value" id="rCorrAngle">─</span></div>
+          <div><span class="label">Required Descent Rate (fpm):</span> <span class="value" id="rROD">─</span></div>
+          <div><span class="label">Approach Time (min):</span> <span class="value" id="rAppTime">─</span></div>
+          <div><span class="label">RNP Tolerance (±NM):</span> <span class="value" id="rRNPTol">─</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div style="padding:10px;background:rgba(255,200,0,.1);border-radius:8px;margin-top:10px;font-size:11px;color:var(--sub);">
+      <b>⚠ Formulas (ICAO/FAA verified):</b> 
+      PA=(29.92−QNH)×1000+IndAlt | DA=PA+120×(OAT−ISA_T) | σ=(T_act/T_ISA)^4.256×(P/P₀)^5.256 | 
+      TAS=IAS/√σ | WCA=arcsin(WS×sin(WindAngle)/TAS) | GS=√(TAS²+WS²−2×TAS×WS×cos(WindAngle)) | 
+      Angle_corr=StdAngle+(ΔT×0.02°) | ROD=GS×tan(Angle)×101.3
     </div>
   </div>
 
