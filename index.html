@@ -2176,7 +2176,7 @@ function calcAll(){
       setResult('rWindAngle', '─');
       setResult('rWCA', '─');
       setResult('rHeading', finalTrack > 0 ? Math.round(finalTrack) + '°' : '─');
-      setResult('rGS', tas > 0 ? Math.round(tas) + ' kts' : '─');
+      setResult('rGS', correctedSpeed > 0 ? Math.round(correctedSpeed) + ' kts' : '─');
       setResult('rWindComp', '─');
     }
     
