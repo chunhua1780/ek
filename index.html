@@ -228,6 +228,17 @@
   /* Community: Pilot Lounge + Sim Notes */
   .mode-btn.lounge .ic{background:var(--good-bg);}
   .mode-btn.simnotes .ic{background:rgba(90,200,250,.16);}
+  .mode-btn.calc .ic{background:rgba(100,100,255,.16);}
+  .calc-section{margin-bottom:20px;padding:12px;background:var(--chip-bg);border-radius:14px;}
+  .calc-section .title{font-weight:700;font-size:13px;color:var(--accent);margin-bottom:8px;text-transform:uppercase;}
+  .calc-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;}
+  .calc-row.full{grid-template-columns:1fr;}
+  .calc-input{display:flex;flex-direction:column;}
+  .calc-input label{font-size:11px;color:var(--sub);margin-bottom:3px;}
+  .calc-input input{padding:8px 10px;border:1px solid var(--border);border-radius:8px;background:var(--card);color:var(--text);font-size:13px;}
+  .calc-result{padding:10px;background:var(--card);border-radius:10px;border-left:3px solid var(--accent);font-size:13.5px;line-height:1.6;}
+  .calc-result .label{font-size:11px;color:var(--sub);}
+  .calc-result .value{font-weight:700;color:var(--accent);}
   .chat-box{display:flex;flex-direction:column;gap:10px;padding:6px 0 12px;}
   .chat-msg{max-width:85%;align-self:flex-start;background:var(--card);border:1px solid var(--border);border-radius:14px;padding:9px 13px;}
   .chat-msg.mine{align-self:flex-end;background:var(--chip-bg);border-color:transparent;}
@@ -444,6 +455,11 @@
         <div><div class="t">Pilot Forum</div><div class="d">Open forum — post, reply, share pictures. Any nickname you like</div></div>
         <div class="arrow">›</div>
       </button>
+      <button class="mode-btn calc" onclick="openCalc()">
+        <div class="ic">🦮</div>
+        <div><div class="t">Flight Calculator</div><div class="d">Time, distance, speed, fuel, wind correction</div></div>
+        <div class="arrow">›</div>
+      </button>
       <button class="mode-btn simnotes" onclick="openSimNotes()">
         <div class="ic">🛫</div>
         <div><div class="t">Sim Notes</div><div class="d">Debriefs & heads-ups shared after sim sessions</div></div>
@@ -596,6 +612,89 @@
     <div class="card">
       <h2 style="font-size:16px;">Feedback 💡</h2>
       <div id="adFeedback"><div class="empty-note">Loading…</div></div>
+    </div>
+  </div>
+
+  <!-- FLIGHT CALCULATOR -->
+  <div class="screen" id="calc">
+    <button class="back-link" onclick="show('home')">‹ Back</button>
+    <div class="card">
+      <h2>Flight Calculator 🦮</h2>
+      <p class="desc">Pilot's quick planning tool: time, distance, speed, fuel burn, wind correction.</p>
+    </div>
+
+    <div class="calc-section">
+      <div class="title">Time / Distance / Speed</div>
+      <div class="calc-row">
+        <div class="calc-input">
+          <label>Distance (NM)</label>
+          <input type="number" id="tdsDistance" placeholder="0" oninput="calcTDS()">
+        </div>
+        <div class="calc-input">
+          <label>Ground Speed (kts)</label>
+          <input type="number" id="tdsGS" placeholder="0" oninput="calcTDS()">
+        </div>
+      </div>
+      <div class="calc-row full">
+        <div class="calc-input">
+          <label>Time (hours:minutes, e.g. 1.5 for 1h30m)</label>
+          <input type="number" id="tdsTime" placeholder="0" step="0.01" oninput="calcTDS()">
+        </div>
+      </div>
+      <div class="calc-result">
+        <div class="label">Flight Time:</div>
+        <div class="value" id="tdsTimeResult">—</div>
+      </div>
+    </div>
+
+    <div class="calc-section">
+      <div class="title">Fuel Calculation</div>
+      <div class="calc-row">
+        <div class="calc-input">
+          <label>Fuel Burn (gal/hr or lbs/hr)</label>
+          <input type="number" id="fuelBurnRate" placeholder="0" oninput="calcFuel()">
+        </div>
+        <div class="calc-input">
+          <label>Flight Time (hrs)</label>
+          <input type="number" id="fuelFlightTime" placeholder="0" step="0.01" oninput="calcFuel()">
+        </div>
+      </div>
+      <div class="calc-row full">
+        <div class="calc-input">
+          <label>Reserve (% of trip fuel, usually 5-10)</label>
+          <input type="number" id="fuelReservePercent" value="10" placeholder="10" oninput="calcFuel()">
+        </div>
+      </div>
+      <div class="calc-result">
+        <div><span class="label">Trip Fuel:</span> <span class="value" id="fuelTripResult">—</span></div>
+        <div><span class="label">With Reserve:</span> <span class="value" id="fuelTotalResult">—</span></div>
+      </div>
+    </div>
+
+    <div class="calc-section">
+      <div class="title">Wind Correction</div>
+      <div class="calc-row">
+        <div class="calc-input">
+          <label>True Air Speed (kts)</label>
+          <input type="number" id="windTAS" placeholder="0" oninput="calcWind()">
+        </div>
+        <div class="calc-input">
+          <label>Wind Speed (kts)</label>
+          <input type="number" id="windSpeed" placeholder="0" oninput="calcWind()">
+        </div>
+      </div>
+      <div class="calc-row full">
+        <div class="calc-input">
+          <label>Wind Direction (headwind=0, tailwind=1)</label>
+          <select id="windDir" onchange="calcWind()" style="padding:8px 10px;border:1px solid var(--border);border-radius:8px;background:var(--card);color:var(--text);">
+            <option value="0">Headwind</option>
+            <option value="1">Tailwind</option>
+          </select>
+        </div>
+      </div>
+      <div class="calc-result">
+        <div><span class="label">Ground Speed:</span> <span class="value" id="windGSResult">—</span></div>
+      </div>
     </div>
   </div>
 
@@ -1841,6 +1940,45 @@ async function submitComment(){
   var msg = document.getElementById('cmtMsg');
   if(r.error){ msg.className='auth-msg err'; msg.textContent='Failed: '+r.error.message; return; }
   msg.className='auth-msg'; inp.value=''; loadComments();
+}
+
+// ═══ Flight Calculator ═══
+function openCalc(){
+  show('calc');
+}
+function fmtTime(h){
+  if(!h || h==null || isNaN(h)) return '—';
+  var hrs = Math.floor(h);
+  var mins = Math.round((h - hrs) * 60);
+  if(mins===60){ hrs++; mins=0; }
+  return hrs+'h '+(mins<10?'0':'')+mins+'m';
+}
+function calcTDS(){
+  var d = parseFloat(document.getElementById('tdsDistance').value)||0;
+  var gs = parseFloat(document.getElementById('tdsGS').value)||0;
+  var t = parseFloat(document.getElementById('tdsTime').value)||0;
+  if(d && gs){ t = d/gs; }
+  else if(d && t){ gs = d/t; }
+  else if(gs && t){ d = gs*t; }
+  document.getElementById('tdsTimeResult').textContent = fmtTime(t);
+}
+function calcFuel(){
+  var rate = parseFloat(document.getElementById('fuelBurnRate').value)||0;
+  var time = parseFloat(document.getElementById('fuelFlightTime').value)||0;
+  var reserve = parseFloat(document.getElementById('fuelReservePercent').value)||10;
+  var trip = rate * time;
+  var total = trip * (1 + reserve/100);
+  var fmt = function(x){ return x ? x.toFixed(1) : '—'; };
+  document.getElementById('fuelTripResult').textContent = fmt(trip);
+  document.getElementById('fuelTotalResult').textContent = fmt(total);
+}
+function calcWind(){
+  var tas = parseFloat(document.getElementById('windTAS').value)||0;
+  var ws = parseFloat(document.getElementById('windSpeed').value)||0;
+  var dir = document.getElementById('windDir').value;
+  var gs = dir==='1' ? tas + ws : tas - ws;
+  gs = Math.max(0, gs);
+  document.getElementById('windGSResult').textContent = gs ? gs.toFixed(0)+' kts' : '—';
 }
 
 // ═══ Offline download ═══
