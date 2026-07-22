@@ -2030,6 +2030,58 @@ function fmtTime(h){
 
 
 
+
+// ═══ Offline download ═══
+var OFFLINE_ASSETS = ['./', './index.html', './questions.js', './supabase.js', './manifest.json', './icon192.png', './icon512.png'];
+async function offlineCacheName(){
+  var keys = await caches.keys();
+  var mine = keys.filter(function(k){ return k.indexOf('b777-')===0; }).sort();
+  return mine.length ? mine[mine.length-1] : 'b777-manual';
+}
+async function checkOffline(){
+  var st = document.getElementById('offlineStatus');
+  if(!st) return;
+  if(!('caches' in window)){ st.textContent = 'Not supported in this browser.'; var b=document.getElementById('offlineBtn'); if(b) b.style.display='none'; return; }
+  try{
+    var c = await caches.open(await offlineCacheName());
+    var q = await c.match('./questions.js', {ignoreSearch:true});
+    var i = await c.match('./index.html', {ignoreSearch:true});
+    if(q && i){
+      st.textContent = '\u2705 Ready \u2014 all 964 questions work without internet on this device.';
+      var b=document.getElementById('offlineBtn'); if(b) b.textContent = 'Re-download';
+    } else if(navigator.onLine && !window.__autoDl){
+      window.__autoDl = true;
+      st.textContent = 'Downloading offline data automatically\u2026';
+      downloadOffline();
+    } else {
+      st.textContent = 'Not downloaded yet on this device.';
+    }
+  }catch(e){ st.textContent = 'Status unknown \u2014 tap Download to be safe.'; }
+}
+async function downloadOffline(){
+  var btn = document.getElementById('offlineBtn'), st = document.getElementById('offlineStatus');
+  if(!btn || !st) return;
+  if(!navigator.onLine){ st.textContent = 'You are offline \u2014 connect to the internet to download.'; return; }
+  btn.disabled = true;
+  try{
+    var c = await caches.open(await offlineCacheName());
+    for(var i=0;i<OFFLINE_ASSETS.length;i++){
+      btn.textContent = 'Downloading\u2026 ' + (i+1) + '/' + OFFLINE_ASSETS.length;
+      var resp = await fetch(OFFLINE_ASSETS[i], {cache:'reload'});
+      if(!resp.ok) throw new Error('HTTP '+resp.status+' on '+OFFLINE_ASSETS[i]);
+      await c.put(OFFLINE_ASSETS[i], resp);
+    }
+    if('serviceWorker' in navigator){ try{ navigator.serviceWorker.register('sw.js'); }catch(e){} }
+    st.textContent = '\u2705 Done \u2014 this device now works fully offline. Test it in airplane mode!';
+    btn.textContent = 'Re-download';
+  }catch(e){
+    st.textContent = 'Download failed ('+e.message+') \u2014 check your connection and try again.';
+    btn.textContent = 'Download offline data';
+  }
+  btn.disabled = false;
+}
+
+
 function openFeedback(){
   document.getElementById('fbText').value = '';
   var el = document.getElementById('fbMsg'); el.className='auth-msg'; el.textContent='';
