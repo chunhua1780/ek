@@ -1241,6 +1241,7 @@ function renderQuestion(){
     var dispLetter = 'ABCD'.charAt(i);
     var btn = document.createElement('button');
     btn.className = 'ans-btn';
+    btn.setAttribute('data-orig', orig);
     btn.innerHTML = '<span class="lt">'+dispLetter+'</span><span>'+escapeHtml(q.options[orig])+'</span>';
     if(graded){
       btn.disabled = true;
@@ -1286,8 +1287,8 @@ function pickAnswer(letter){
   if(st.revealed || SESSION.finished) return;
   st.chosen = letter;
   document.querySelectorAll('#ansList .ans-btn').forEach(function(btn){
-    var lt = btn.querySelector('.lt').textContent;
-    btn.classList.toggle('picked', lt===letter);
+    var orig = btn.getAttribute('data-orig');
+    btn.classList.toggle('picked', orig===letter);
   });
   document.getElementById('submitBtn').disabled = false;
   updateNav();
