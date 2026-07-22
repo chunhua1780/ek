@@ -2158,6 +2158,48 @@ async function renderAdmin(){
   }).join('') : '<div class="empty-note">No feedback yet.</div>';
 }
 
+
+// ═══ Smart Version Check (auto-update, keeps offline working) ═══
+var APP_VERSION = '45';  // must match version.json — bump on every deploy
+async function checkVersion(){
+  // Only run online; offline we happily use the cached app.
+  if(!navigator.onLine) return;
+  try{
+    // Cache-busting fetch of the tiny version file
+    var resp = await fetch('./version.json?t=' + Date.now(), { cache: 'no-store' });
+    if(!resp.ok) return;
+    var data = await resp.json();
+    var serverVersion = String(data.version || '');
+    var localVersion = '';
+    try{ localVersion = localStorage.getItem('b777_app_version') || ''; }catch(e){}
+
+    if(!localVersion){
+      // First run — just record the current version, no reload
+      try{ localStorage.setItem('b777_app_version', serverVersion); }catch(e){}
+      return;
+    }
+
+    if(serverVersion && serverVersion !== localVersion){
+      // New version available → clear caches once and hard-reload
+      try{ localStorage.setItem('b777_app_version', serverVersion); }catch(e){}
+      if(window.caches){
+        var keys = await caches.keys();
+        await Promise.all(keys.filter(function(k){ return k.indexOf('b777')===0; }).map(function(k){ return caches.delete(k); }));
+      }
+      if('serviceWorker' in navigator){
+        var regs = await navigator.serviceWorker.getRegistrations();
+        await Promise.all(regs.map(function(r){ return r.update(); }));
+      }
+      // Reload with cache-busting param so the browser fetches fresh HTML
+      var url = new URL(window.location.href);
+      url.searchParams.set('_v', serverVersion);
+      window.location.replace(url.toString());
+    }
+  }catch(e){ /* network hiccup — ignore, use cached app */ }
+}
+
+
+checkVersion();
 setupServiceWorker();
 initAuth();
 

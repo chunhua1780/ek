@@ -1,4 +1,4 @@
-const CACHE = 'b777-v44';
+const CACHE = 'b777-v45';
 const ASSETS = ['./', './index.html', './questions.js', './supabase.js', './manifest.json', './icon192.png', './icon512.png'];
 
 self.addEventListener('install', function(e){
@@ -26,6 +26,11 @@ async function cleanResponse(resp){
 }
 self.addEventListener('fetch', function(e){
   if(e.request.method !== 'GET') return;
+  // version.json must ALWAYS hit the network so version checks work
+  if(e.request.url.indexOf('version.json') > -1){
+    e.respondWith(fetch(e.request).catch(function(){ return new Response('{"version":"0"}', {headers:{'Content-Type':'application/json'}}); }));
+    return;
+  }
   var isNav = e.request.mode === 'navigate' || e.request.url.indexOf('index.html') > -1;
   if(isNav){
     // Offline-first: serve the cached app instantly, refresh it in the background.
