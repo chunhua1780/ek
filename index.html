@@ -2132,20 +2132,13 @@ function calcAll(){
     setResult('rPA', Math.round(pa) + ' ft');
     setResult('rDA', Math.round(da) + ' ft');
     
-    // ===== STEP 2: TAS (用密度比) =====
+    // ===== STEP 2: TAS (2% per 1000ft rule) =====
+    // TAS = IAS × [1 + (PA/1000 × 0.02)]
     var tas = 0;
-    var sigma = 0;
     if(ias > 0){
-      var paMeter = pa * 0.3048;
-      var isaTemp2 = 15 - 0.0065 * paMeter;
-      var presRatio = Math.pow(1 - 6.8755856e-6 * pa, 5.2558797);
-      var tempRatio = (oat + 273.15) / (isaTemp2 + 273.15);
-      sigma = Math.pow(tempRatio, 4.256) * Math.pow(presRatio, 5.256);
-      sigma = Math.max(0.01, sigma);
-      tas = ias / Math.sqrt(sigma);
-      
+      tas = ias * (1 + (pa / 1000) * 0.02);
       setResult('rTAS', Math.round(tas) + ' kts');
-      setResult('rSigma', sigma.toFixed(4));
+      setResult('rSigma', '(2%/1000ft rule)');
     } else {
       setResult('rTAS', '─');
       setResult('rSigma', '─');
