@@ -619,8 +619,71 @@
   <div class="screen" id="calc">
     <button class="back-link" onclick="show('home')">‹ Back</button>
     <div class="card">
-      <h2>Flight Calculator 🦮</h2>
-      <p class="desc">Pilot's quick planning tool: time, distance, speed, fuel burn, wind correction.</p>
+      <h2>Flight Planning Tool 🦮</h2>
+      <p class="desc">Professional calculations: altitude, descent planning, performance.</p>
+    </div>
+
+    <div class="calc-section">
+      <div class="title">Altitude Calculations</div>
+      <div class="calc-row">
+        <div class="calc-input">
+          <label>Altimeter Setting (QNH, inHg)</label>
+          <input type="number" id="qnh" placeholder="29.92" step="0.01" oninput="calcAltitude()">
+        </div>
+        <div class="calc-input">
+          <label>Current Altitude Indication (feet)</label>
+          <input type="number" id="indicatedAlt" placeholder="0" oninput="calcAltitude()">
+        </div>
+      </div>
+      <div class="calc-row">
+        <div class="calc-input">
+          <label>Temperature (C)</label>
+          <input type="number" id="tempC" placeholder="0" oninput="calcAltitude()">
+        </div>
+        <div class="calc-input">
+          <label>Station Elevation (feet)</label>
+          <input type="number" id="stationElev" placeholder="0" oninput="calcAltitude()">
+        </div>
+      </div>
+      <div class="calc-result">
+        <div><span class="label">Pressure Altitude:</span> <span class="value" id="pressureAltResult">—</span></div>
+        <div><span class="label">Density Altitude:</span> <span class="value" id="densityAltResult">—</span></div>
+      </div>
+    </div>
+
+    <div class="calc-section">
+      <div class="title">Descent Planning</div>
+      <div class="calc-row">
+        <div class="calc-input">
+          <label>Current Altitude (feet)</label>
+          <input type="number" id="descentCurAlt" placeholder="0" oninput="calcDescent()">
+        </div>
+        <div class="calc-input">
+          <label>Target Altitude (feet)</label>
+          <input type="number" id="descentTgtAlt" placeholder="0" oninput="calcDescent()">
+        </div>
+      </div>
+      <div class="calc-row">
+        <div class="calc-input">
+          <label>Ground Speed (knots)</label>
+          <input type="number" id="descentGS" placeholder="0" oninput="calcDescent()">
+        </div>
+        <div class="calc-input">
+          <label>Distance to Descent Point (NM)</label>
+          <input type="number" id="descentDist" placeholder="0" oninput="calcDescent()">
+        </div>
+      </div>
+      <div class="calc-row full">
+        <div class="calc-input">
+          <label>Descent Gradient / Glide Slope Angle (degrees, typical -3°)</label>
+          <input type="number" id="glideSlope" placeholder="-3" step="0.1" oninput="calcDescent()">
+        </div>
+      </div>
+      <div class="calc-result">
+        <div><span class="label">Required Descent Rate (fpm):</span> <span class="value" id="descentRateResult">—</span></div>
+        <div><span class="label">Descent Time (min):</span> <span class="value" id="descentTimeResult">—</span></div>
+        <div><span class="label">Distance to Begin Descent (NM):</span> <span class="value" id="tbd">—</span></div>
+      </div>
     </div>
 
     <div class="calc-section">
@@ -637,18 +700,17 @@
       </div>
       <div class="calc-row full">
         <div class="calc-input">
-          <label>Time (hours:minutes, e.g. 1.5 for 1h30m)</label>
+          <label>Time (hours, e.g. 1.5 = 1h30m)</label>
           <input type="number" id="tdsTime" placeholder="0" step="0.01" oninput="calcTDS()">
         </div>
       </div>
       <div class="calc-result">
-        <div class="label">Flight Time:</div>
         <div class="value" id="tdsTimeResult">—</div>
       </div>
     </div>
 
     <div class="calc-section">
-      <div class="title">Fuel Calculation</div>
+      <div class="title">Fuel Planning</div>
       <div class="calc-row">
         <div class="calc-input">
           <label>Fuel Burn (gal/hr or lbs/hr)</label>
@@ -661,7 +723,7 @@
       </div>
       <div class="calc-row full">
         <div class="calc-input">
-          <label>Reserve (% of trip fuel, usually 5-10)</label>
+          <label>Reserve (% of trip fuel)</label>
           <input type="number" id="fuelReservePercent" value="10" placeholder="10" oninput="calcFuel()">
         </div>
       </div>
@@ -672,7 +734,7 @@
     </div>
 
     <div class="calc-section">
-      <div class="title">Wind Correction</div>
+      <div class="title">Wind Correction (TAS to GS)</div>
       <div class="calc-row">
         <div class="calc-input">
           <label>True Air Speed (kts)</label>
@@ -685,7 +747,7 @@
       </div>
       <div class="calc-row full">
         <div class="calc-input">
-          <label>Wind Direction (headwind=0, tailwind=1)</label>
+          <label>Wind Direction</label>
           <select id="windDir" onchange="calcWind()" style="padding:8px 10px;border:1px solid var(--border);border-radius:8px;background:var(--card);color:var(--text);">
             <option value="0">Headwind</option>
             <option value="1">Tailwind</option>
