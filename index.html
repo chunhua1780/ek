@@ -2110,6 +2110,20 @@ function fmtDur(sec){
   return hrs>0 ? hrs+'h '+m+'m' : m+'m';
 }
 function openAdmin(){ show('admin'); renderAdmin(); }
+async function adminResetPw(userId, label){
+  var pw = prompt('Set new password for '+label+' (leave blank to auto-generate a random one, min 6 chars):', '');
+  if(pw === null) return; // cancelled
+  pw = pw.trim();
+  if(pw && pw.length < 6){ alert('Password must be at least 6 characters.'); return; }
+  var body = { user_id: userId };
+  if(pw) body.new_password = pw;
+  var r = await sb.functions.invoke('admin-reset-password', { body: body });
+  if(r.error || (r.data && r.data.error)){
+    alert('Failed: ' + (r.error ? r.error.message : r.data.error));
+    return;
+  }
+  alert('Password reset for '+label+'. New password: ' + r.data.new_password);
+}
 async function renderAdmin(){
   var today = new Date().toISOString().slice(0,10);
   var d7 = new Date(Date.now()-7*86400000).toISOString().slice(0,10);
@@ -2148,7 +2162,8 @@ async function renderAdmin(){
   document.getElementById('adUserList').innerHTML = profs.data.length ? profs.data.map(function(p){
     var a = byUser[p.user_id] || { sec:0, views:0 };
     return '<div class="ad-row"><div><div class="au">'+esc(p.staff_id||'?')+'</div><div style="color:var(--sub);font-size:12px;">joined '+fmtTime(p.created_at)+'</div></div>'
-      + '<div class="am">'+fmtDur(a.sec)+' · '+a.views+' views<br>last: '+fmtTime(p.last_seen)+'</div></div>';
+      + '<div class="am">'+fmtDur(a.sec)+' · '+a.views+' views<br>last: '+fmtTime(p.last_seen)+'</div>'
+      + '<button class="ad-reset-btn" style="margin-left:8px;font-size:12px;padding:4px 10px;border-radius:8px;border:1px solid var(--line);background:transparent;color:var(--sub);cursor:pointer;" onclick="adminResetPw(\''+p.user_id+'\',\''+esc(p.staff_id||'this user')+'\')">Reset PW</button></div>';
   }).join('') : '<div class="empty-note">No users yet.</div>';
   var fb = await sb.from('b777_feedback').select('*').order('created_at',{ascending:false}).limit(50);
   var fbEl = document.getElementById('adFeedback');
@@ -2160,7 +2175,7 @@ async function renderAdmin(){
 
 
 // ═══ Smart Version Check (auto-update, keeps offline working) ═══
-var APP_VERSION = '45';  // must match version.json — bump on every deploy
+var APP_VERSION = '46';  // must match version.json — bump on every deploy
 async function checkVersion(){
   // Only run online; offline we happily use the cached app.
   if(!navigator.onLine) return;
