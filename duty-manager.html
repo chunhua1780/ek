@@ -300,6 +300,11 @@
       <h2 class="n3">Diagram 3 — Duty Timeline (overview)</h2>
       <div style="overflow-x:auto;"><svg id="timelineSvg" viewBox="0 0 1000 220" style="width:100%; min-width:700px; height:auto;"></svg></div>
     </div>
+
+    <div class="card">
+      <h2 class="n3">Step-by-Step Calculation</h2>
+      <div id="sbySteps" style="font-size:12px;line-height:1.7;"></div>
+    </div>
   </section>
 
   <!-- ============ TAB 3: REST ============ -->
@@ -744,6 +749,61 @@ function calcStandby(){
     {min:reportMinNorm, sectorIdx:sectorIdx, rowCls:'hlrow-blue', cellCls:'hlcell-blue', tag:'Report'},
     {min:startMin, sectorIdx:sectorIdx, rowCls:'hlrow-amber', cellCls:'hlcell-amber', tag:'SBY Start'}
   ]);
+
+  // ===== STEP-BY-STEP WORKING =====
+  const sSteps = [];
+  let sN = 1;
+  function sStep(title, formula, sub, result){
+    sSteps.push(
+      '<div style="margin-bottom:10px;padding:8px 10px;background:rgba(255,255,255,0.03);border-radius:8px;border-left:3px solid #6ab8ff;">' +
+        '<div style="font-weight:700;">Step ' + (sN++) + ' \u2014 ' + title + '</div>' +
+        '<div style="color:var(--muted);font-size:11px;margin:2px 0;">Formula: ' + formula + '</div>' +
+        (sub ? '<div style="color:var(--muted);font-size:11px;margin:2px 0;">Substituting: ' + sub + '</div>' : '') +
+        '<div style="font-weight:700;color:var(--green);">' + result + '</div>' +
+      '</div>'
+    );
+  }
+
+  sStep('Standby Duration (Start \u2192 Report)',
+    'Duration = Report Time \u2212 SBY Start (standby ends at Report per 7.14, not at Call)',
+    'Duration = ' + fmt(reportMinNorm) + ' \u2212 ' + fmt(startMin),
+    '= ' + fmtDur(sbyHours));
+
+  sStep('Notice Given (Call \u2192 Report)',
+    'Notice = Report Time \u2212 Call Time',
+    'Notice = ' + fmt(reportMinNorm) + ' \u2212 ' + fmt(callMin),
+    '= ' + fmtDur(noticeMin/60) + (q2 ? ' (\u2264 2h)' : ' (> 2h)'));
+
+  sStep('Decision Path (which rule applies)',
+    'Q1: SBY start in 22:00\u201308:00? \u2192 Q2: notice \u2264 2h? \u2192 use Report-Time-only rule (7.14.1). Otherwise \u2192 use \u201cmore limiting\u201d rule (7.14 general).',
+    'Q1 = ' + (q1?'YES':'NO') + ', Q2 = ' + (q1?(q2?'YES':'NO'):'n/a (Q1 was NO)') + ', Q3 (SBY\u22656h) = ' + (q3?'YES':'NO'),
+    'Path: ' + (useLeft ? 'Report-Time-only rule (7.14.1)' : '\u201cMore limiting\u201d rule (7.14 general)') + ' \u2192 Outcome ' + outcome);
+
+  if(useLeft){
+    sStep('Comparison Step \u2014 not needed here',
+      'This pairing qualifies for 7.14.1 (home/accommodation standby, 22:00\u201308:00, notice \u22642h), so FDP is taken directly from Report Time \u2014 no comparison against SBY Start is required.',
+      '',
+      'FDP basis = Report Time value = ' + fmtDur(tableAtReport));
+  } else {
+    const winner = tableAtReport <= tableAtSbyStart ? 'Report Time' : 'SBY Start';
+    sStep('Comparison Step \u2014 SBY Start vs Report Time (which is more limiting?)',
+      'Look up the FDP table twice: once using SBY Start as if it were the report time, once using the actual Report Time. The smaller (more restrictive) value wins.',
+      'Table(SBY Start ' + fmt(startMin) + ') = ' + fmtDur(tableAtSbyStart) + '  vs  Table(Report Time ' + fmt(reportMinNorm) + ') = ' + fmtDur(tableAtReport),
+      'More limiting = ' + winner + ' \u2192 ' + fmtDur(moreLimiting));
+  }
+
+  sStep('Apply Case A / B (7.14.3) and finalise FDP',
+    formula,
+    (outcome===2||outcome===3) ? ('Base ' + fmtDur(useLeft?tableAtReport:moreLimiting) + ' \u2212 (' + fmtDur(sbyHours) + ' \u2212 6h)') : ('Base = ' + fmtDur(useLeft?tableAtReport:moreLimiting) + ', no excess deduction (SBY < 6h)'),
+    '= ' + fmtDur(fdpValue));
+
+  sStep('Conclusion',
+    'Off-duty time = Report Time + Allowable FDP. Min rest afterwards = max(FDP + SBY duration, 12h).',
+    'Off-duty = ' + fmt(reportMinNorm) + ' + ' + fmtDur(fdpValue),
+    'Allowable FDP = ' + fmtDur(fdpValue) + ', off-duty at ' + fmt(offDutyMin) + ', min rest after \u2265 ' + fmtDur(minNextRest));
+
+  const sStepsEl = document.getElementById('sbySteps');
+  if(sStepsEl) sStepsEl.innerHTML = sSteps.join('');
 }
 
 // ---- Diagram 1: flowchart (orthogonal routing) ----

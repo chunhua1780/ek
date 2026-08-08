@@ -1,5 +1,6 @@
-const CACHE = 'b777-v47';
+const CACHE = 'b777-v48';
 const ASSETS = ['./', './index.html', './questions.js', './supabase.js', './manifest.json', './icon192.png', './icon512.png', './duty-manager.html'];
+const PAGES = ['./index.html', './duty-manager.html'];
 
 self.addEventListener('install', function(e){
   e.waitUntil(caches.open(CACHE).then(function(c){ return c.addAll(ASSETS.map(function(u){ return new Request(u, {cache:'reload'}); })); }));
@@ -24,28 +25,37 @@ async function cleanResponse(resp){
   var body = await resp.blob();
   return new Response(body, { status: 200, statusText: 'OK', headers: resp.headers });
 }
+
 self.addEventListener('fetch', function(e){
   if(e.request.method !== 'GET') return;
+  var url = e.request.url;
+
   // version.json must ALWAYS hit the network so version checks work
-  if(e.request.url.indexOf('version.json') > -1){
+  if(url.indexOf('version.json') > -1){
     e.respondWith(fetch(e.request).catch(function(){ return new Response('{"version":"0"}', {headers:{'Content-Type':'application/json'}}); }));
     return;
   }
-  var isNav = (e.request.mode === 'navigate' || e.request.url.indexOf('index.html') > -1) && e.request.url.indexOf('duty-manager.html') === -1;
-  if(isNav){
-    // Offline-first: serve the cached app instantly, refresh it in the background.
+
+  // Any of our top-level pages: serve the cached copy instantly, but ALWAYS
+  // kick off a background fetch to refresh the cache with the latest version.
+  // Content self-heals within one extra load -- no manual cache clearing
+  // ever required, even if the service worker version itself hasn't changed.
+  var isDutyManager = url.indexOf('duty-manager.html') > -1;
+  var isPage = e.request.mode === 'navigate' || url.indexOf('index.html') > -1 || isDutyManager;
+  if(isPage){
+    var targetPage = isDutyManager ? './duty-manager.html' : './index.html';
     e.respondWith((async function(){
-      var cached = await caches.match('./index.html');
+      var cached = await caches.match(targetPage);
       var netPromise = fetch(e.request).then(async function(resp){
         if(resp && resp.ok){
           resp = await cleanResponse(resp);
           var c = await caches.open(CACHE);
-          c.put('./index.html', resp.clone());
+          c.put(targetPage, resp.clone());
         }
         return resp;
       }).catch(function(){ return null; });
       if(cached){
-        e.waitUntil(netPromise);   // background sync of the newest version
+        e.waitUntil(netPromise);
         return await cleanResponse(cached);
       }
       var net = await netPromise;
@@ -53,7 +63,8 @@ self.addEventListener('fetch', function(e){
     })());
     return;
   }
-  // Everything else: cache-first (fast + offline)
+
+  // Everything else (real static assets: js, icons, manifest): cache-first
   e.respondWith(
     caches.match(e.request, {ignoreSearch:true}).then(function(cached){
       if(cached) return cached;
