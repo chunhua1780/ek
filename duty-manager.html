@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Duty Manager · EK FTL Chapter 7</title>
+<style>
+  :root{
+    --bg:#060b10; --panel:#0e161d; --panel-2:#121c24;
+    --line:#1c2830; --line-bright:#2a3a46;
+    --green:#5cffb1; --green-dim:#2f7a5c;
+    --amber:#ffc94a; --red:#ff5c6c; --blue:#6ab8ff; --grey:#4a5a66;
+    --text:#d7e4ec; --muted:#6c8394;
+    --mono: ui-monospace, "SF Mono", "Cascadia Mono", "JetBrains Mono", Consolas, monospace;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:var(--sans);}
+  body{background:radial-gradient(1200px 600px at 50% -10%, #0d1a22 0%, transparent 60%), var(--bg); padding:24px 16px 64px;}
+  .wrap{max-width:1040px;margin:0 auto;}
+
+  header.hero{border:1px solid var(--line); background:linear-gradient(180deg, var(--panel), var(--panel-2)); border-radius:14px; padding:22px 22px 18px; margin-bottom:18px; position:relative; overflow:hidden;}
+  header.hero::before{content:""; position:absolute; inset:0; background-image: repeating-linear-gradient(90deg, rgba(92,255,177,0.035) 0px, rgba(92,255,177,0.035) 1px, transparent 1px, transparent 28px); pointer-events:none;}
+  .eyebrow{font-family:var(--mono); font-size:11px; letter-spacing:.14em; color:var(--green); text-transform:uppercase; display:flex; align-items:center; gap:8px;}
+  .eyebrow .dot{width:6px;height:6px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green);}
+  h1{font-size:22px;margin:8px 0 4px;font-weight:650;letter-spacing:-.01em;}
+  .sub{color:var(--muted);font-size:13px;line-height:1.6;max-width:700px;}
+  .disclaimer{margin-top:14px;font-size:12px;color:var(--amber);border-left:2px solid var(--amber);padding:8px 12px;background:rgba(255,201,74,0.06);border-radius:4px;line-height:1.6;}
+
+  nav.tabs{display:flex; gap:6px; margin-bottom:16px; border:1px solid var(--line); border-radius:10px; padding:4px; background:var(--panel); overflow-x:auto;}
+  nav.tabs button{flex:1; white-space:nowrap; background:transparent; border:none; color:var(--muted); font-family:var(--sans); font-size:12.5px; font-weight:600; padding:10px 10px; border-radius:7px; cursor:pointer;}
+  nav.tabs button.active{background:var(--panel-2); color:var(--green);}
+  nav.tabs button:hover:not(.active){color:var(--text);}
+
+  section.panel{display:none;} section.panel.active{display:block;}
+
+  .card{border:1px solid var(--line); background:var(--panel); border-radius:12px; padding:18px; margin-bottom:14px;}
+  .card h2{font-size:13px; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); margin:0 0 14px; font-weight:700; display:flex; align-items:center; gap:8px;}
+  .card h2::before{content:"";width:3px;height:13px;background:var(--green);border-radius:2px;display:inline-block;}
+  .card h2.n2::before{background:var(--blue);} .card h2.n3::before{background:var(--amber);}
+
+  .grid{display:grid; grid-template-columns:1fr 1fr; gap:12px;} .grid3{display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px;}
+  @media (max-width:620px){.grid,.grid3{grid-template-columns:1fr;}}
+
+  label{display:block; font-size:12px; color:var(--muted); margin-bottom:5px; font-weight:600;}
+  select, input[type=time], input[type=number]{width:100%; background:var(--panel-2); border:1px solid var(--line-bright); color:var(--text); font-family:var(--mono); font-size:14px; padding:9px 10px; border-radius:7px; margin-bottom:12px;}
+  select:focus, input:focus{outline:2px solid var(--green); outline-offset:1px; border-color:var(--green);}
+
+  .radio-row{display:flex; gap:8px; margin-bottom:12px; flex-wrap:wrap;}
+  .radio-row label.opt{flex:1; min-width:110px; display:flex; align-items:center; justify-content:center; gap:6px; background:var(--panel-2); border:1px solid var(--line-bright); padding:9px 8px; border-radius:7px; font-family:var(--mono); font-size:12.5px; color:var(--muted); cursor:pointer; margin-bottom:0; font-weight:600; text-align:center;}
+  .radio-row input{display:none;}
+  .radio-row label.opt:has(input:checked){border-color:var(--green); background:rgba(92,255,177,0.07); color:var(--green);}
+
+  .result{border:1px solid var(--line-bright); background:var(--panel-2); border-radius:10px; padding:16px; margin-top:4px;}
+  .result-row{display:flex; justify-content:space-between; align-items:baseline; padding:8px 0; border-bottom:1px dashed var(--line); font-size:13px; gap:10px;}
+  .result-row:last-child{border-bottom:none;}
+  .result-row .k{color:var(--muted);}
+  .result-row .v{font-family:var(--mono); font-size:15px; font-weight:700; color:var(--text); text-align:right;}
+  .result-row .v.green{color:var(--green);} .result-row .v.amber{color:var(--amber);} .result-row .v.blue{color:var(--blue);}
+
+  .warn-box{margin-top:12px; padding:10px 12px; border-radius:8px; font-size:12.5px; line-height:1.6; border:1px solid; display:flex; gap:8px; align-items:flex-start;}
+  .warn-box.info{border-color:var(--line-bright); background:rgba(255,255,255,0.02); color:var(--muted);}
+  .warn-box.amber{border-color:var(--amber); background:rgba(255,201,74,0.06); color:var(--amber);}
+  .warn-box.red{border-color:var(--red); background:rgba(255,92,108,0.06); color:var(--red);}
+  .warn-box.green{border-color:var(--green); background:rgba(92,255,177,0.06); color:var(--green);}
+
+  table.ref{width:100%; border-collapse:collapse; font-size:12.5px;}
+  table.ref th, table.ref td{padding:7px 6px; border-bottom:1px solid var(--line); text-align:center;}
+  table.ref th{color:var(--muted); font-size:10.5px; text-transform:uppercase;}
+  table.ref td:first-child, table.ref th:first-child{text-align:left;}
+
+  .bar{position:relative; height:26px; border-radius:6px; background:var(--panel-2); border:1px solid var(--line-bright); overflow:hidden; margin-top:6px;}
+  .bar-fill{position:absolute; top:0; bottom:0; left:0; background:linear-gradient(90deg, var(--green), #34caa0);}
+  .bar-fill.warn{background:linear-gradient(90deg, var(--amber), #e0983a);}
+  .bar-fill.over{background:linear-gradient(90deg, var(--red), #c23e4c);}
+
+  svg text{font-family:var(--sans); fill:var(--text);}
+  .node-box{fill:var(--panel-2); stroke:var(--line-bright); stroke-width:1.5;}
+  .node-box.active{stroke:var(--green); stroke-width:2.5; filter:drop-shadow(0 0 6px rgba(92,255,177,0.5));}
+  .node-diamond{fill:var(--panel-2); stroke:var(--line-bright); stroke-width:1.5;}
+  .node-diamond.active{stroke:var(--blue); stroke-width:2.5; filter:drop-shadow(0 0 6px rgba(106,184,255,0.5));}
+  .edge{stroke:var(--line-bright); stroke-width:1.5; fill:none; marker-end:url(#arrow);}
+  .edge.active{stroke:var(--green); stroke-width:3; marker-end:url(#arrowActive);}
+  .edge-label{font-size:11px; font-family:var(--mono); fill:var(--muted);}
+  .edge-label.active{fill:var(--green); font-weight:700;}
+  .node-label{font-size:11.5px;}
+  .node-label.dim{fill:var(--muted);}
+  .node-outcome{font-size:11px; fill:var(--blue);}
+
+  footer{text-align:center; color:var(--muted); font-size:11px; margin-top:24px; font-family:var(--mono);}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="hero">
+    <div class="eyebrow"><span class="dot"></span>EK FTL · CHAPTER 7 (STANDARD SCHEME)</div>
+    <h1>Duty Manager</h1>
+    <div class="sub">Flight duty time reference tool covering standard FDP, standby FDP determination (with live decision-tree visualisation), rest requirements and cumulative limits.</div>
+    <div class="disclaimer">⚠ For personal planning and study only — not the basis for actual dispatch. Always defer to the current OM-A Chapter 7 and the company's official rostering system. Commander's discretion and fatigue judgement are made on the day, not by this tool.</div>
+  </header>
+
+  <nav class="tabs" role="tablist">
+    <button class="active" data-tab="fdp">FDP Calculator</button>
+    <button data-tab="standby">Standby</button>
+    <button data-tab="rest">Rest &amp; Days Off</button>
+    <button data-tab="cumulative">Cumulative Limits</button>
+  </nav>
+
+  <!-- ============ TAB 1: FDP ============ -->
+  <section class="panel active" id="tab-fdp">
+    <div class="card">
+      <h2>Flight Details</h2>
+      <div class="grid">
+        <div><label for="stdTime">Departure time STD (local)</label><input type="time" id="stdTime" value="10:25"></div>
+        <div><label for="sectors">Planned number of sectors</label><input type="number" id="sectors" value="1" min="1" max="10"></div>
+      </div>
+      <label>Applicable scheme</label>
+      <div class="radio-row" id="ruleTypeRow">
+        <label class="opt"><input type="radio" name="ruleType" value="standard" checked><span>Standard scheme</span></label>
+        <label class="opt"><input type="radio" name="ruleType" value="lrv"><span>LRV (Long Range Variation)</span></label>
+      </div>
+      <div class="warn-box info" id="lrvHint" style="display:none;">For LRV sectors the FDP is fixed at 18h (S1) / 20h (S2), not table-derived. This only computes the correct Report Time; use the dedicated LRV tool for actual FDP.</div>
+
+      <label>Crew size</label>
+      <div class="radio-row" id="crewCountRow">
+        <label class="opt"><input type="radio" name="crewCount" value="2" checked><span>2 pilots</span></label>
+        <label class="opt"><input type="radio" name="crewCount" value="3plus"><span>3/4-pilot augmented</span></label>
+      </div>
+
+      <label>Acclimatised?</label>
+      <div class="radio-row" id="acclimRow">
+        <label class="opt"><input type="radio" name="acclim" value="yes" checked><span>Yes</span></label>
+        <label class="opt"><input type="radio" name="acclim" value="no"><span>No</span></label>
+      </div>
+      <div id="notAcclimWrap" class="grid">
+        <div><label for="prevRest">Previous rest period (hours)</label><input type="number" id="prevRest" value="24" step="0.5" min="0"></div>
+        <div></div>
+      </div>
+
+      <label>Crew member type</label>
+      <div class="radio-row" id="memberTypeRow">
+        <label class="opt"><input type="radio" name="memberType" value="fc" checked><span>Flight Crew</span></label>
+        <label class="opt"><input type="radio" name="memberType" value="cc"><span>Cabin Crew</span></label>
+      </div>
+
+      <label>Report location</label>
+      <div class="radio-row" id="locRow">
+        <label class="opt"><input type="radio" name="loc" value="base" checked><span>Dubai base</span></label>
+        <label class="opt"><input type="radio" name="loc" value="outstation"><span>Outstation</span></label>
+      </div>
+    </div>
+
+    <div class="card" id="twoPilotCard">
+      <h2 class="n2">Two-pilot long-sector folding (7.9.3)</h2>
+      <div class="grid">
+        <div><label for="longestSector">Longest single sector planned flight time (hours)</label><input type="number" id="longestSector" value="7" step="0.5" min="0"></div>
+        <div></div>
+      </div>
+      <div class="warn-box info" id="foldingNote"></div>
+    </div>
+
+    <div class="card">
+      <h2 class="n3">On-board rest / split duty extension (optional)</h2>
+      <div class="radio-row" id="extRow">
+        <label class="opt"><input type="radio" name="ext" value="none" checked><span>No extension</span></label>
+        <label class="opt"><input type="radio" name="ext" value="bunk"><span>Bunk rest</span></label>
+        <label class="opt"><input type="radio" name="ext" value="seat"><span>Seat rest</span></label>
+        <label class="opt"><input type="radio" name="ext" value="split"><span>Split duty (ground)</span></label>
+      </div>
+      <div class="grid"><div><label for="extHours">Total rest hours</label><input type="number" id="extHours" value="3" step="0.5" min="0"></div><div></div></div>
+    </div>
+
+    <div class="card">
+      <h2>Result</h2>
+      <div class="result" id="fdpResult"></div>
+      <div id="fdpWarnings"></div>
+    </div>
+  </section>
+
+  <!-- ============ TAB 2: STANDBY ============ -->
+  <section class="panel" id="tab-standby">
+    <div class="card">
+      <h2>Three time inputs (local time)</h2>
+      <div class="grid3">
+        <div><label for="sbyStart2">Standby start time</label><input type="time" id="sbyStart2" value="22:00"></div>
+        <div><label for="callTime2">Call time (crew notified)</label><input type="time" id="callTime2" value="02:00"></div>
+        <div><label for="stdTime2">Estimated departure STD</label><input type="time" id="stdTime2" value="05:30"></div>
+      </div>
+      <div class="warn-box info">Assumes flight crew, Dubai base, standard scheme, single sector, acclimatised — Report Time = STD − 1:25.</div>
+    </div>
+
+    <div class="card">
+      <h2>Result</h2>
+      <div class="result" id="sbyResult"></div>
+      <div id="sbyWarnings"></div>
+    </div>
+
+    <div class="card">
+      <h2 class="n2">Diagram 1 — Standby FDP Decision Tree</h2>
+      <div style="overflow-x:auto;"><svg id="flowSvg" viewBox="0 0 1020 460" style="width:100%; min-width:860px; height:auto;"></svg></div>
+    </div>
+
+    <div class="card">
+      <h2 class="n2">Diagram 2 — Sector Count Determination (reference, 7.9.3)</h2>
+      <div style="overflow-x:auto;"><svg id="sectorSvg" viewBox="0 0 900 420" style="width:100%; min-width:640px; height:auto;"></svg></div>
+    </div>
+
+    <div class="card">
+      <h2 class="n3">Diagram 3 — Duty Timeline</h2>
+      <div style="overflow-x:auto;"><svg id="timelineSvg" viewBox="0 0 1000 220" style="width:100%; min-width:700px; height:auto;"></svg></div>
+    </div>
+  </section>
+
+  <!-- ============ TAB 3: REST ============ -->
+  <section class="panel" id="tab-rest">
+    <div class="card">
+      <h2>Minimum rest before FDP (7.16 / 7.21.3)</h2>
+      <div class="grid">
+        <div><label for="restMemberType">Crew type</label><select id="restMemberType"><option value="fc">Flight Crew</option><option value="cc">Cabin Crew</option></select></div>
+        <div><label for="restPrevDuty">Previous duty period (hours)</label><input type="number" id="restPrevDuty" value="10" step="0.5" min="0"></div>
+      </div>
+      <div class="grid">
+        <div><label for="restLoc">Rest location</label><select id="restLoc"><option value="base">Base</option><option value="outstation">Outstation</option></select></div>
+        <div><label for="restReduced">Discretion applied (−1h)?</label><select id="restReduced"><option value="no">No</option><option value="yes">Yes</option></select></div>
+      </div>
+      <div class="result" id="restResult"></div>
+    </div>
+
+    <div class="card">
+      <h2>Acclimatisation check (7.5)</h2>
+      <div class="grid">
+        <div><label for="localNights">Consecutive local nights within a 2h-wide timezone</label><input type="number" id="localNights" value="0" min="0"></div>
+        <div><label for="uninterrupted">Uninterrupted night sleep possible?</label><select id="uninterrupted"><option value="yes">Yes</option><option value="no">No</option></select></div>
+      </div>
+      <div class="result" id="acclimResult"></div>
+    </div>
+
+    <div class="card">
+      <h2>Days off / duty cycle quick reference</h2>
+      <table class="ref">
+        <thead><tr><th>Rule</th><th>Flight Crew</th><th>Cabin Crew</th></tr></thead>
+        <tbody>
+          <tr><td>Max consecutive duty before day off</td><td class="mono">7 days</td><td class="mono">7 days</td></tr>
+          <tr><td>Consecutive days off within 14 days</td><td class="mono">2 days</td><td class="mono">2 days</td></tr>
+          <tr><td>Min days off within 28 days</td><td class="mono">7</td><td class="mono">8</td></tr>
+          <tr><td>Min days off within 84 days</td><td class="mono">24</td><td class="mono">26</td></tr>
+          <tr><td>Min days off within 12 months</td><td class="mono">—</td><td class="mono">100</td></tr>
+          <tr><td>Single day-off minimum length</td><td class="mono">34h (2 nights)</td><td class="mono">34h (2 nights)</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ============ TAB 4: CUMULATIVE ============ -->
+  <section class="panel" id="tab-cumulative">
+    <div class="card">
+      <h2>Cumulative duty / flight time tracker</h2>
+      <div class="grid"><div><label for="cumMemberType">Crew type</label><select id="cumMemberType"><option value="fc">Flight Crew</option><option value="cc">Cabin Crew</option></select></div><div></div></div>
+      <div class="grid3">
+        <div><label for="cum7">7-day cumulative duty (h)</label><input type="number" id="cum7" value="0" step="0.5" min="0"></div>
+        <div><label for="cum14">14-day cumulative duty (h)</label><input type="number" id="cum14" value="0" step="0.5" min="0"></div>
+        <div><label for="cum28">28-day cumulative duty (h)</label><input type="number" id="cum28" value="0" step="0.5" min="0"></div>
+      </div>
+      <div class="grid">
+        <div><label for="ft28">28-day flight time (h)</label><input type="number" id="ft28" value="0" step="0.5" min="0"></div>
+        <div><label for="ft12m">12-month flight time (h)</label><input type="number" id="ft12m" value="0" step="1" min="0"></div>
+      </div>
+      <div id="cumBars"></div>
+    </div>
+
+    <div class="card">
+      <h2>Limit reference table</h2>
+      <table class="ref">
+        <thead><tr><th>Period</th><th>FC duty</th><th>CC duty</th></tr></thead>
+        <tbody>
+          <tr><td>7 days</td><td class="mono">55h (60h if delayed)</td><td class="mono">60h (65h if delayed)</td></tr>
+          <tr><td>14 days</td><td class="mono">95h</td><td class="mono">115h</td></tr>
+          <tr><td>28 days</td><td class="mono">190h</td><td class="mono">200h</td></tr>
+          <tr><td>84 days</td><td class="mono">—</td><td class="mono">600h</td></tr>
+        </tbody>
+      </table>
+      <table class="ref" style="margin-top:10px;">
+        <thead><tr><th>Period</th><th>FC flight time</th><th>CC flight time</th></tr></thead>
+        <tbody>
+          <tr><td>28 days</td><td class="mono">100h (single sector on day 28 OK even if exceeded)</td><td class="mono">120h</td></tr>
+          <tr><td>12 months</td><td class="mono">900h</td><td class="mono">1200h</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <footer>DATA SOURCE · EK OM-A CHAPTER 7 (7.1–7.22) — FOR PLANNING REFERENCE ONLY</footer>
+</div>
+
+<script>
+// ================= FDP TABLES =================
+const FC_ACCLIM = [
+  [360,480,[13,12.25,11.5,10.75,10,9.5,9,9]],
+  [480,780,[14,13.25,12.5,11.75,11,10.5,10,9.5]],
+  [780,1080,[13,12.25,11.5,10.75,10,9.5,9,9]],
+  [1080,1320,[12,11.25,10.5,9.75,9,9,9,9]],
+  [1320,1800,[11,10.25,9.5,9,9,9,9,9]],
+];
+const FC_NOTACCLIM = { "leq18_or_gt30":[13,12.25,11.5,10.75,10,9.25,9], "18to30":[11.5,11,10.5,9.75,9,9,9] };
+const CC_ACCLIM = [
+  [360,480,[14,13.25,12.5,11.75,11,10.5,10,10]],
+  [480,780,[15,14.25,13.5,12.75,12,11.5,11,10.5]],
+  [780,1080,[14,13.25,12.5,11.75,11,10.5,10,10]],
+  [1080,1320,[13,12.25,11.5,10.75,10,10,10,10]],
+  [1320,1800,[12,11.25,10.5,10,10,10,10,10]],
+];
+const CC_NOTACCLIM = { "leq18_or_gt30":[14,13.25,12.5,11.75,11,10.25,10], "18to30":[12.5,12,11.5,10.75,10,10,10] };
+
+function toMin(hhmm){ const [h,m]=hhmm.split(':').map(Number); return h*60+m; }
+function fmt(mins){ mins=((mins%1440)+1440)%1440; const h=Math.floor(mins/60).toString().padStart(2,'0'); const m=Math.round(mins%60).toString().padStart(2,'0'); return h+':'+m; }
+function fmtDur(hrs){ const h=Math.floor(hrs); const m=Math.round((hrs-h)*60); return h+'h'+(m?' '+m+'m':''); }
+
+function lookupAcclim(table, reportMin, sectorIdx){
+  let m = ((reportMin%1440)+1440)%1440;
+  for(const [s,e,arr] of table){
+    if(e<=1440){ if(m>=s && m<e) return arr[Math.min(sectorIdx,arr.length-1)]; }
+    else { if(m>=s || m<(e-1440)) return arr[Math.min(sectorIdx,arr.length-1)]; }
+  }
+  return table[table.length-1][2][Math.min(sectorIdx,table[table.length-1][2].length-1)];
+}
+
+const REPORT_OFFSETS = { standard:{fc:{base:85,outstation:65},cc:{base:90,outstation:65}}, lrv:{fc:{base:85,outstation:75},cc:{base:90,outstation:75}} };
+
+function twoPilotFold(sectorHours, acclim){
+  if(sectorHours<=7) return null;
+  if(sectorHours<=9) return acclim==='yes' ? 2 : 4;
+  if(sectorHours<=11) return acclim==='yes' ? 3 : 4;
+  return acclim==='yes' ? 4 : null;
+}
+
+function calcFDP(){
+  const stdMin = toMin(document.getElementById('stdTime').value||"10:25");
+  const sectors = Math.max(1, Number(document.getElementById('sectors').value||1));
+  const crewCount = document.querySelector('#crewCountRow input:checked').value;
+  const acclim = document.querySelector('#acclimRow input:checked').value;
+  const prevRest = Number(document.getElementById('prevRest').value||24);
+  const memberType = document.querySelector('#memberTypeRow input:checked').value;
+  const longestSector = Number(document.getElementById('longestSector').value||0);
+  const loc = document.querySelector('#locRow input:checked').value;
+  const ruleType = document.querySelector('#ruleTypeRow input:checked').value;
+  document.getElementById('lrvHint').style.display = ruleType==='lrv' ? 'flex' : 'none';
+  document.getElementById('notAcclimWrap').style.display = acclim==='no' ? 'grid' : 'none';
+  document.getElementById('twoPilotCard').style.display = crewCount==='2' ? 'block' : 'none';
+
+  const offsetMin = REPORT_OFFSETS[ruleType][memberType][loc];
+  const reportMin = stdMin - offsetMin;
+
+  let effectiveSectors = sectors, foldNote="";
+  if(crewCount==='2' && longestSector>7){
+    const folded = twoPilotFold(longestSector, acclim);
+    if(folded===null){ foldNote="Sector >11h and not acclimatised: table does not apply for a 2-pilot crew — requires an augmenting pilot."; effectiveSectors=99; }
+    else { effectiveSectors = Math.max(sectors, folded); foldNote = "Longest sector " + longestSector + "h (" + (acclim==='yes'?'acclimatised':'not acclimatised') + ") folded to " + folded + " sectors per 7.9.3."; }
+  }
+  document.getElementById('foldingNote').textContent = crewCount==='2' ? (longestSector>7 ? foldNote : "Longest sector <=7h - no folding needed, use actual sector count.") : "";
+
+  const sectorIdx = Math.min(effectiveSectors-1,7);
+  const table = memberType==='fc'?FC_ACCLIM:CC_ACCLIM;
+  const tableNA = memberType==='fc'?FC_NOTACCLIM:CC_NOTACCLIM;
+  let baseFDP, basisText;
+  if(acclim==='yes'){ baseFDP=lookupAcclim(table,reportMin,sectorIdx); basisText="Report "+fmt(reportMin)+" + "+effectiveSectors+" sector(s), acclimatised table"; }
+  else { const bracket=(prevRest<=18||prevRest>30)?"leq18_or_gt30":"18to30"; const arr=tableNA[bracket]; baseFDP=arr[Math.min(effectiveSectors-1,arr.length-1)]; basisText="Prev rest "+prevRest+"h ("+(bracket==='18to30'?'18-30h':'<=18h or >30h')+") + "+effectiveSectors+" sector(s), not-acclimatised table"; }
+
+  const extType = document.querySelector('#extRow input:checked').value;
+  const extHours = Number(document.getElementById('extHours').value||0);
+  let extendedFDP=baseFDP, extNote="";
+  const capBunk = memberType==='fc'?18:19, capSeat = memberType==='fc'?15:16;
+  if(extType==='bunk'){ if(extHours>=3){ const add=extHours/2; extendedFDP=Math.min(baseFDP+add,capBunk); extNote="Bunk rest "+extHours+"h -> +"+add.toFixed(2)+"h, capped at "+capBunk+"h"; } else extNote="Needs >=3h total on-board rest (7.7.1.4)"; }
+  else if(extType==='seat'){ if(extHours>=3){ const add=extHours/3; extendedFDP=Math.min(baseFDP+add,capSeat); extNote="Seat rest "+extHours+"h -> +"+add.toFixed(2)+"h, capped at "+capSeat+"h"; } else extNote="Needs >=3h total on-board rest (7.7.1.4)"; }
+  else if(extType==='split'){ if(extHours<3) extNote="Ground rest <3h: no extension (7.7.2)"; else { const capped=Math.min(extHours,10); const add=capped/2; extendedFDP=baseFDP+add; extNote="Split duty ground rest "+extHours+"h (capped at 10h) -> +"+add.toFixed(2)+"h"; } }
+
+  const offsetH=Math.floor(offsetMin/60), offsetM=offsetMin%60;
+  const offDuty = reportMin + extendedFDP*60;
+  document.getElementById('fdpResult').innerHTML =
+    '<div class="result-row"><span class="k">Report time (STD - '+offsetH+'h'+offsetM.toString().padStart(2,'0')+'m)</span><span class="v blue">'+fmt(reportMin)+'</span></div>'+
+    '<div class="result-row"><span class="k">Basis</span><span class="v" style="font-size:12px;font-weight:600;color:var(--muted)">'+basisText+'</span></div>'+
+    '<div class="result-row"><span class="k">Base max FDP</span><span class="v">'+fmtDur(baseFDP)+'</span></div>'+
+    '<div class="result-row"><span class="k">Extension</span><span class="v" style="font-size:12px;font-weight:600;color:var(--amber)">'+(extNote||'-')+'</span></div>'+
+    '<div class="result-row"><span class="k">Final max FDP</span><span class="v green">'+fmtDur(extendedFDP)+'</span></div>'+
+    '<div class="result-row"><span class="k">Latest off-duty time</span><span class="v blue">'+fmt(offDuty)+'</span></div>';
+  let warns="";
+  if(effectiveSectors>=99) warns += '<div class="warn-box red">This combination is not covered by the standard 2-pilot table. Check sector length / acclimatisation, or plan an augmenting pilot.</div>';
+  document.getElementById('fdpWarnings').innerHTML = warns;
+}
+['stdTime','sectors','prevRest','longestSector','extHours'].forEach(id=>document.getElementById(id).addEventListener('input', calcFDP));
+document.querySelectorAll('#crewCountRow input,#acclimRow input,#memberTypeRow input,#locRow input,#extRow input,#ruleTypeRow input').forEach(r=>r.addEventListener('change', calcFDP));
+
+// ================= STANDBY + 3 DIAGRAMS =================
+function diffHoursWrap(startMin,endMin){ let d=endMin-startMin; if(d<0) d+=1440; return d/60; }
+
+function calcStandby(){
+  const startMin = toMin(document.getElementById('sbyStart2').value||"22:00");
+  const callMin = toMin(document.getElementById('callTime2').value||"02:00");
+  const stdMin = toMin(document.getElementById('stdTime2').value||"05:30");
+
+  const sbyHours = diffHoursWrap(startMin, callMin);
+  const reportMin = stdMin - 85;
+  const reportMinNorm = ((reportMin%1440)+1440)%1440;
+  const noticeMin = diffHoursWrap(callMin, reportMinNorm)*60;
+
+  const q1 = (startMin>=22*60 || startMin<8*60);
+  const q2 = noticeMin<=120;
+  const useLeft = q1 && q2;
+  const q3 = sbyHours>=6;
+
+  const tableAtReport = lookupAcclim(FC_ACCLIM, reportMinNorm, 0);
+  const tableAtSbyStart = lookupAcclim(FC_ACCLIM, startMin, 0);
+  const moreLimiting = Math.min(tableAtReport, tableAtSbyStart);
+
+  let outcome, fdpValue, formula;
+  if(useLeft){
+    if(!q3){ outcome=1; fdpValue=tableAtReport; formula="FDP = Report Time table value"; }
+    else { outcome=2; fdpValue=tableAtReport-(sbyHours-6); formula="FDP = Report Time value - (SBY time over 6h)"; }
+  } else {
+    if(q3){ outcome=3; fdpValue=moreLimiting-(sbyHours-6); formula="FDP = more limiting(SBY start, Report Time) - (SBY time over 6h)"; }
+    else { outcome=4; fdpValue=moreLimiting; formula="FDP = more limiting(SBY start, Report Time)"; }
+  }
+  fdpValue = Math.max(fdpValue, 0);
+
+  const offDutyMin = reportMinNorm + fdpValue*60;
+  const minNextRest = Math.max(fdpValue+sbyHours, 12);
+
+  document.getElementById('sbyResult').innerHTML =
+    '<div class="result-row"><span class="k">Standby duration (Start to Call)</span><span class="v">'+fmtDur(sbyHours)+'</span></div>'+
+    '<div class="result-row"><span class="k">Report Time (STD - 1:25)</span><span class="v blue">'+fmt(reportMinNorm)+'</span></div>'+
+    '<div class="result-row"><span class="k">Notice given (Call to Report)</span><span class="v">'+fmtDur(noticeMin/60)+'</span></div>'+
+    '<div class="result-row"><span class="k">Path taken</span><span class="v green">Outcome '+outcome+'</span></div>'+
+    '<div class="result-row"><span class="k">Formula</span><span class="v" style="font-size:12px;font-weight:600;color:var(--amber)">'+formula+'</span></div>'+
+    '<div class="result-row"><span class="k">Allowable FDP</span><span class="v green">'+fmtDur(fdpValue)+'</span></div>'+
+    '<div class="result-row"><span class="k">Estimated off-duty time</span><span class="v blue">'+fmt(offDutyMin)+'</span></div>'+
+    '<div class="result-row"><span class="k">Min rest afterwards</span><span class="v green">'+fmtDur(minNextRest)+'</span></div>';
+  let warns="";
+  if(sbyHours>12) warns += '<div class="warn-box red">Standby duration exceeds the 12h maximum (7.14.3).</div>';
+  document.getElementById('sbyWarnings').innerHTML = warns;
+
+  drawFlowchart(q1,q2,q3,useLeft,outcome);
+  drawSectorDiagram();
+  drawTimeline(startMin,callMin,reportMinNorm,stdMin,offDutyMin,sbyHours);
+}
+
+// ---- Diagram 1: flowchart (orthogonal routing) ----
+function drawFlowchart(q1,q2,q3,useLeft,outcome){
+  const svg = document.getElementById('flowSvg');
+  svg.setAttribute('viewBox','0 0 1020 460');
+  const A = (cond)=> cond ? 'active' : '';
+  function diamond(cx,cy,w,h,text1,text2,active){
+    return '<polygon class="node-diamond '+A(active)+'" points="'+cx+','+(cy-h/2)+' '+(cx+w/2)+','+cy+' '+cx+','+(cy+h/2)+' '+(cx-w/2)+','+cy+'"/>'+
+      '<text class="node-label '+(active?'':'dim')+'" x="'+cx+'" y="'+(cy-4)+'" text-anchor="middle">'+text1+'</text>'+
+      '<text class="node-label '+(active?'':'dim')+'" x="'+cx+'" y="'+(cy+12)+'" text-anchor="middle">'+text2+'</text>';
+  }
+  function box(x,y,w,h,lines,active,num,numSide){
+    let out = '<rect class="node-box '+A(active)+'" x="'+x+'" y="'+y+'" width="'+w+'" height="'+h+'" rx="6"/>';
+    lines.forEach((l,i)=>{ out += '<text class="node-outcome" x="'+(x+w/2)+'" y="'+(y+h/2-6+i*15)+'" text-anchor="middle">'+l+'</text>'; });
+    const ncx = numSide==='left' ? x-24 : x+w+24;
+    out += '<circle cx="'+ncx+'" cy="'+(y+h/2)+'" r="16" fill="'+(active?'#5cffb1':'#12222b')+'" stroke="'+(active?'#5cffb1':'#2a3a46')+'" stroke-width="2"/>';
+    out += '<text x="'+ncx+'" y="'+(y+h/2+5)+'" text-anchor="middle" font-weight="700" font-size="14" fill="'+(active?'#06120c':'#6c8394')+'">'+num+'</text>';
+    return out;
+  }
+  // straight (single-segment, already orthogonal) edge
+  function edgeS(x1,y1,x2,y2,label,active,lx,ly){
+    return '<path class="edge '+A(active)+'" d="M'+x1+','+y1+' L'+x2+','+y2+'"/>'+
+      '<text class="edge-label '+A(active)+'" x="'+lx+'" y="'+ly+'" text-anchor="middle">'+label+'</text>';
+  }
+  // elbow edge: horizontal then vertical
+  function edgeHV(x1,y1,x2,y2,label,active,lx,ly){
+    return '<path class="edge '+A(active)+'" d="M'+x1+','+y1+' L'+x2+','+y1+' L'+x2+','+y2+'"/>'+
+      '<text class="edge-label '+A(active)+'" x="'+lx+'" y="'+ly+'" text-anchor="middle">'+label+'</text>';
+  }
+
+  let html = '<defs><marker id="arrow" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#2a3a46"/></marker>'+
+    '<marker id="arrowActive" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#5cffb1"/></marker></defs>';
+
+  const top   = {x:510, y:55,  w:230, h:90};
+  const mid   = {x:510, y:225, w:250, h:90};
+  const leftD = {x:230, y:225, w:200, h:90};
+  const rightD= {x:790, y:225, w:200, h:90};
+  const box1  = {x:10,  y:195, w:110, h:60};
+  const box2  = {x:150, y:340, w:160, h:70};
+  const box3  = {x:710, y:340, w:160, h:70};
+  const box4  = {x:900, y:195, w:110, h:60};
+
+  // Top YES -> Mid (straight vertical, same x)
+  html += edgeS(top.x, top.y+top.h/2, mid.x, mid.y-mid.h/2, "YES", q1, top.x-24, (top.y+top.h/2+mid.y-mid.h/2)/2);
+  // Top NO -> Right diamond top (elbow: right then down)
+  html += edgeHV(top.x+top.w/2, top.y, rightD.x, rightD.y-rightD.h/2, "NO", !q1, (top.x+top.w/2+rightD.x)/2, top.y-10);
+  // Mid YES -> Left diamond (straight horizontal, same y)
+  html += edgeS(mid.x-mid.w/2, mid.y, leftD.x+leftD.w/2, leftD.y, "YES", q1&&q2, (mid.x-mid.w/2+leftD.x+leftD.w/2)/2, mid.y-12);
+  // Mid NO -> Right diamond (straight horizontal, same y)
+  html += edgeS(mid.x+mid.w/2, mid.y, rightD.x-rightD.w/2, rightD.y, "NO", q1&&!q2, (mid.x+mid.w/2+rightD.x-rightD.w/2)/2, mid.y-12);
+  // Left diamond NO -> Box1 (straight horizontal, same y)
+  html += edgeS(leftD.x-leftD.w/2, leftD.y, box1.x+box1.w, box1.y+box1.h/2, "NO", useLeft&&outcome===1, (leftD.x-leftD.w/2+box1.x+box1.w)/2, leftD.y-12);
+  // Left diamond YES -> Box2 (straight vertical, same x)
+  html += edgeS(leftD.x, leftD.y+leftD.h/2, box2.x+box2.w/2, box2.y, "YES", useLeft&&outcome===2, leftD.x+26, (leftD.y+leftD.h/2+box2.y)/2);
+  // Right diamond YES -> Box3 (straight vertical, same x)
+  html += edgeS(rightD.x, rightD.y+rightD.h/2, box3.x+box3.w/2, box3.y, "YES", !useLeft&&outcome===3, rightD.x-26, (rightD.y+rightD.h/2+box3.y)/2);
+  // Right diamond NO -> Box4 (straight horizontal, same y)
+  html += edgeS(rightD.x+rightD.w/2, rightD.y, box4.x, box4.y+box4.h/2, "NO", !useLeft&&outcome===4, (rightD.x+rightD.w/2+box4.x)/2, rightD.y-12);
+
+  html += diamond(top.x, top.y, top.w, top.h, "Is SBY between", "22:00-08:00?", true);
+  html += diamond(mid.x, mid.y, mid.w, mid.h, "Was crew given <=2h", "notice to report?", q1);
+  html += diamond(leftD.x, leftD.y, leftD.w, leftD.h, "On SBY for 6h", "or more?", useLeft);
+  html += diamond(rightD.x, rightD.y, rightD.w, rightD.h, "On SBY for 6h", "or more?", !useLeft);
+
+  html += box(box1.x, box1.y, box1.w, box1.h, ["FDP = Report Time"], useLeft&&outcome===1, 1, 'left');
+  html += box(box2.x, box2.y, box2.w, box2.h, ["FDP = Report Time","MINUS excess over 6h"], useLeft&&outcome===2, 2, 'left');
+  html += box(box3.x, box3.y, box3.w, box3.h, ["FDP = more limiting","MINUS excess over 6h"], !useLeft&&outcome===3, 3, 'right');
+  html += box(box4.x, box4.y, box4.w, box4.h, ["FDP = more limiting","(SBY start / Report)"], !useLeft&&outcome===4, 4, 'right');
+
+  svg.innerHTML = html;
+}
+
+// ---- Diagram 2: sector reference ----
+function drawSectorDiagram(){
+  const svg = document.getElementById('sectorSvg');
+  function d(cx,cy,w,h,t){return '<polygon class="node-diamond" points="'+cx+','+(cy-h/2)+' '+(cx+w/2)+','+cy+' '+cx+','+(cy+h/2)+' '+(cx-w/2)+','+cy+'"/><text class="node-label dim" x="'+cx+'" y="'+(cy+4)+'" text-anchor="middle">'+t+'</text>';}
+  function b(x,y,w,h,t){return '<rect class="node-box" x="'+x+'" y="'+y+'" width="'+w+'" height="'+h+'" rx="6"/><text class="node-outcome" x="'+(x+w/2)+'" y="'+(y+h/2+4)+'" text-anchor="middle">'+t+'</text>';}
+  function e(x1,y1,x2,y2,label){return '<path class="edge" d="M'+x1+','+y1+' L'+x2+','+y2+'" marker-end="url(#arrow2)"/><text class="edge-label" x="'+((x1+x2)/2)+'" y="'+((y1+y2)/2-6)+'" text-anchor="middle">'+label+'</text>';}
+
+  let html = '<defs><marker id="arrow2" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#2a3a46"/></marker></defs>';
+  html += d(450,40,240,60,"Crew = 2 pilots?");
+  html += e(450,70,450,120,"YES");
+  html += e(560,40,780,40,"NO");
+  html += b(690,15,180,50,"Use actual sectors");
+
+  html += d(450,160,240,60,"Longest sector > 7h?");
+  html += e(450,190,450,240,"YES");
+  html += e(560,160,780,160,"NO");
+  html += b(690,135,180,50,"Use actual sectors");
+
+  html += d(450,280,200,60,"Acclimatised?");
+  html += e(360,280,180,280,"YES");
+  html += e(540,280,720,280,"NO");
+
+  html += '<rect class="node-box" x="60" y="320" width="230" height="80" rx="6"/>'+
+    '<text class="node-outcome" x="175" y="342" text-anchor="middle">7-9h -&gt; 2 sectors</text>'+
+    '<text class="node-outcome" x="175" y="360" text-anchor="middle">9-11h -&gt; 3 sectors</text>'+
+    '<text class="node-outcome" x="175" y="378" text-anchor="middle">&gt;11h -&gt; 4 sectors</text>';
+  html += '<rect class="node-box" x="610" y="320" width="230" height="80" rx="6"/>'+
+    '<text class="node-outcome" x="725" y="342" text-anchor="middle">7-9h -&gt; 4 sectors</text>'+
+    '<text class="node-outcome" x="725" y="360" text-anchor="middle">9-11h -&gt; 4 sectors</text>'+
+    '<text class="node-outcome" x="725" y="378" text-anchor="middle">&gt;11h -&gt; not applicable</text>';
+
+  svg.innerHTML = html;
+}
+
+// ---- Diagram 3: duty timeline ----
+function drawTimeline(startMin,callMin,reportMin,stdMin,offDutyMin,sbyHours){
+  const svg = document.getElementById('timelineSvg');
+  function unwrap(base, m){ let v=m; while(v<base) v+=1440; return v; }
+  const t0 = startMin;
+  const tCall = unwrap(t0, callMin);
+  const tReport = unwrap(t0, reportMin);
+  const tStd = unwrap(t0, stdMin);
+  const tOff = unwrap(t0, offDutyMin);
+  const total = tOff - t0 + 30;
+  const scale = 940/total;
+  const X = (t)=> 30 + (t-t0)*scale;
+
+  function seg(x1,x2,y,h,color,label){
+    return '<rect x="'+x1+'" y="'+y+'" width="'+Math.max(2,x2-x1)+'" height="'+h+'" fill="'+color+'" opacity="0.85" rx="3"/>'+
+      '<text x="'+((x1+x2)/2)+'" y="'+(y+h/2+4)+'" text-anchor="middle" font-size="10.5" font-family="monospace" fill="#06120c" font-weight="700">'+label+'</text>';
+  }
+  function tick(x,y1,y2,label,color){
+    return '<line x1="'+x+'" y1="'+y1+'" x2="'+x+'" y2="'+y2+'" stroke="'+(color||'#6c8394')+'" stroke-width="1.5"/>'+
+      '<text x="'+x+'" y="'+(y1-6)+'" text-anchor="middle" font-size="10.5" fill="'+(color||'#d7e4ec')+'" font-family="monospace">'+label+'</text>';
+  }
+
+  let html = "";
+  html += seg(X(t0), X(tCall), 70, 34, "#6ab8ff", "STANDBY");
+  html += seg(X(tCall), X(tReport), 70, 34, "#ffc94a", "NOTICE");
+  html += seg(X(tReport), X(tOff), 70, 34, "#5cffb1", "FDP");
+  html += tick(X(t0), 70, 130, fmt(startMin), "#6ab8ff");
+  html += tick(X(tCall), 70, 130, fmt(callMin), "#ffc94a");
+  html += tick(X(tReport), 70, 130, fmt(reportMin), "#5cffb1");
+  html += tick(X(tStd), 70, 130, "STD "+fmt(stdMin), "#d7e4ec");
+  html += tick(X(tOff), 70, 130, fmt(((offDutyMin%1440)+1440)%1440), "#5cffb1");
+  if(sbyHours>=6){
+    const t6 = t0+6*60;
+    html += '<line x1="'+X(t6)+'" y1="60" x2="'+X(t6)+'" y2="114" stroke="#ff5c6c" stroke-width="1.5" stroke-dasharray="4,3"/>'+
+      '<text x="'+X(t6)+'" y="150" text-anchor="middle" font-size="10" fill="#ff5c6c" font-family="monospace">6h mark</text>';
+  }
+  svg.innerHTML = html;
+}
+
+['sbyStart2','callTime2','stdTime2'].forEach(id=>document.getElementById(id).addEventListener('input', calcStandby));
+
+// ================= REST =================
+function calcRest(){
+  const memberType = document.getElementById('restMemberType').value;
+  const prevDuty = Number(document.getElementById('restPrevDuty').value||0);
+  const loc = document.getElementById('restLoc').value;
+  const reduced = document.getElementById('restReduced').value;
+  let minRest = memberType==='fc' ? Math.max(prevDuty,12) : Math.max(prevDuty-1,11);
+  let afterReduction=minRest, note="";
+  if(reduced==='yes'){
+    if(loc==='base'){ const floor=memberType==='fc'?12:11; afterReduction=Math.max(minRest-1,floor); note="Base reduction: max 1h off, not below 12h(FC)/11h(CC) (7.16.1.1)"; }
+    else { if(minRest>=12){ afterReduction=Math.max(minRest-1,10); note="Outstation reduction: rest=12h with suitable accommodation, >=10h available (7.16.1.2)"; } else note="Outstation reduction only applies when rest is exactly 12h"; }
+  }
+  document.getElementById('restResult').innerHTML =
+    '<div class="result-row"><span class="k">Base minimum rest</span><span class="v">'+fmtDur(minRest)+'</span></div>'+
+    '<div class="result-row"><span class="k">Reduction note</span><span class="v" style="font-size:12px;font-weight:600;color:var(--muted)">'+(note||'No discretion applied')+'</span></div>'+
+    '<div class="result-row"><span class="k">Final minimum rest</span><span class="v green">'+fmtDur(afterReduction)+'</span></div>';
+}
+['restMemberType','restPrevDuty','restLoc','restReduced'].forEach(id=>{document.getElementById(id).addEventListener('input',calcRest); document.getElementById(id).addEventListener('change',calcRest);});
+
+function calcAcclim(){
+  const nights=Number(document.getElementById('localNights').value||0);
+  const unint=document.getElementById('uninterrupted').value;
+  const ok = nights>=3 && unint==='yes';
+  document.getElementById('acclimResult').innerHTML =
+    '<div class="result-row"><span class="k">Consecutive local nights</span><span class="v">'+nights+'</span></div>'+
+    '<div class="result-row"><span class="k">Result</span><span class="v '+(ok?'green':'amber')+'">'+(ok?'Acclimatised':'Not acclimatised')+'</span></div>';
+}
+['localNights','uninterrupted'].forEach(id=>{document.getElementById(id).addEventListener('input',calcAcclim); document.getElementById(id).addEventListener('change',calcAcclim);});
+
+// ================= CUMULATIVE =================
+function bar(label,value,max,extra){
+  const pct=Math.min(100,(value/max)*100);
+  const cls = value>max?'over':(value>max*0.9?'warn':'');
+  return '<div style="margin-bottom:10px;"><div style="display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin-bottom:3px;"><span>'+label+'</span><span style="font-family:var(--mono);color:'+(value>max?'var(--red)':'var(--text)')+'">'+value+'h / '+max+'h '+(extra||'')+'</span></div><div class="bar"><div class="bar-fill '+cls+'" style="width:'+pct+'%"></div></div></div>';
+}
+function calcCumulative(){
+  const type=document.getElementById('cumMemberType').value;
+  const c7=Number(document.getElementById('cum7').value||0), c14=Number(document.getElementById('cum14').value||0), c28=Number(document.getElementById('cum28').value||0);
+  const ft28=Number(document.getElementById('ft28').value||0), ft12=Number(document.getElementById('ft12m').value||0);
+  let html="";
+  if(type==='fc'){ html+=bar('7-day duty (delay: 60h)',c7,55); html+=bar('14-day duty',c14,95); html+=bar('28-day duty',c28,190); html+=bar('28-day flight time',ft28,100,'(day-28 exception)'); html+=bar('12-month flight time',ft12,900); }
+  else { html+=bar('7-day duty (delay: 65h)',c7,60); html+=bar('14-day duty',c14,115); html+=bar('28-day duty',c28,200); html+=bar('28-day flight time',ft28,120); html+=bar('12-month flight time',ft12,1200); }
+  document.getElementById('cumBars').innerHTML = html;
+}
+['cumMemberType','cum7','cum14','cum28','ft28','ft12m'].forEach(id=>{document.getElementById(id).addEventListener('input',calcCumulative); document.getElementById(id).addEventListener('change',calcCumulative);});
+
+// ================= TABS =================
+document.querySelectorAll('nav.tabs button').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('nav.tabs button').forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll('section.panel').forEach(p=>p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('tab-'+btn.dataset.tab).classList.add('active');
+  });
+});
+
+calcFDP(); calcStandby(); calcRest(); calcAcclim(); calcCumulative();
+</script>
+</body>
+</html>
