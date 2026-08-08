@@ -519,9 +519,12 @@ function calcStandby(){
   const callMin = toMin(document.getElementById('callTime2').value||"02:00");
   const stdMin = toMin(document.getElementById('stdTime2').value||"05:30");
 
-  const sbyHours = diffHoursWrap(startMin, callMin);
   const reportMin = stdMin - 85;
   const reportMinNorm = ((reportMin%1440)+1440)%1440;
+  // Per 7.14: "the standby duty will end when the crew member reports at the
+  // designated reporting point" — so the standby duration used for the 6h
+  // threshold and Case A/B math runs Start -> Report Time, NOT Start -> Call.
+  const sbyHours = diffHoursWrap(startMin, reportMinNorm);
   const noticeMin = diffHoursWrap(callMin, reportMinNorm)*60;
 
   const q1 = (startMin>=22*60 || startMin<8*60);
@@ -536,9 +539,9 @@ function calcStandby(){
   let outcome, fdpValue, formula;
   if(useLeft){
     if(!q3){ outcome=1; fdpValue=tableAtReport; formula="FDP = Report Time table value"; }
-    else { outcome=2; fdpValue=tableAtReport-(sbyHours-6); formula="FDP = Report Time value - (SBY time over 6h)"; }
+    else { outcome=2; fdpValue=tableAtReport-(sbyHours-6); formula="FDP = Report Time value - (standby time over 6h, measured to Report Time)"; }
   } else {
-    if(q3){ outcome=3; fdpValue=moreLimiting-(sbyHours-6); formula="FDP = more limiting(SBY start, Report Time) - (SBY time over 6h)"; }
+    if(q3){ outcome=3; fdpValue=moreLimiting-(sbyHours-6); formula="FDP = more limiting(SBY start, Report Time) - (standby time over 6h, measured to Report Time)"; }
     else { outcome=4; fdpValue=moreLimiting; formula="FDP = more limiting(SBY start, Report Time)"; }
   }
   fdpValue = Math.max(fdpValue, 0);
@@ -547,7 +550,7 @@ function calcStandby(){
   const minNextRest = Math.max(fdpValue+sbyHours, 12);
 
   document.getElementById('sbyResult').innerHTML =
-    '<div class="result-row"><span class="k">Standby duration (Start to Call)</span><span class="v">'+fmtDur(sbyHours)+'</span></div>'+
+    '<div class="result-row"><span class="k">Standby duration (Start to Report — standby ends at Report Time per 7.14)</span><span class="v">'+fmtDur(sbyHours)+'</span></div>'+
     '<div class="result-row"><span class="k">Report Time (STD - 1:25)</span><span class="v blue">'+fmt(reportMinNorm)+'</span></div>'+
     '<div class="result-row"><span class="k">Notice given (Call to Report)</span><span class="v">'+fmtDur(noticeMin/60)+'</span></div>'+
     '<div class="result-row"><span class="k">Path taken</span><span class="v green">Outcome '+outcome+'</span></div>'+
@@ -708,6 +711,10 @@ function drawTimeline(startMin,callMin,reportMin,stdMin,offDutyMin,sbyHours){
   }
 
   let html = "";
+  html += '<line x1="'+X(t0)+'" y1="40" x2="'+X(tReport)+'" y2="40" stroke="#6c8394" stroke-width="1.5"/>'+
+    '<line x1="'+X(t0)+'" y1="35" x2="'+X(t0)+'" y2="45" stroke="#6c8394" stroke-width="1.5"/>'+
+    '<line x1="'+X(tReport)+'" y1="35" x2="'+X(tReport)+'" y2="45" stroke="#6c8394" stroke-width="1.5"/>'+
+    '<text x="'+((X(t0)+X(tReport))/2)+'" y="28" text-anchor="middle" font-size="10" fill="#6c8394" font-family="monospace">standby duty (ends at Report, 7.14)</text>';
   html += seg(X(t0), X(tCall), 70, 34, "#6ab8ff", "STANDBY");
   html += seg(X(tCall), X(tReport), 70, 34, "#ffc94a", "NOTICE");
   html += seg(X(tReport), X(tOff), 70, 34, "#5cffb1", "FDP");
