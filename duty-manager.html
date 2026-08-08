@@ -68,6 +68,9 @@
   table.ref th, table.ref td{padding:7px 6px; border-bottom:1px solid var(--line); text-align:center;}
   table.ref th{color:var(--muted); font-size:10.5px; text-transform:uppercase;}
   table.ref td:first-child, table.ref th:first-child{text-align:left;}
+  table.lookuptbl tr.hlrow td{background:rgba(106,184,255,0.08);}
+  table.lookuptbl tr.hlrow td:first-child{color:var(--blue); font-weight:700;}
+  table.lookuptbl td.hlcell{background:rgba(92,255,177,0.18)!important; color:var(--green); font-weight:800; border:1px solid var(--green); border-radius:4px;}
 
   .bar{position:relative; height:26px; border-radius:6px; background:var(--panel-2); border:1px solid var(--line-bright); overflow:hidden; margin-top:6px;}
   .bar-fill{position:absolute; top:0; bottom:0; left:0; background:linear-gradient(90deg, var(--green), #34caa0);}
@@ -175,6 +178,11 @@
       <h2>Result</h2>
       <div class="result" id="fdpResult"></div>
       <div id="fdpWarnings"></div>
+    </div>
+
+    <div class="card">
+      <h2 class="n2">FDP Table Used (highlighted)</h2>
+      <div style="overflow-x:auto;"><div id="fdpTableWrap"></div></div>
     </div>
   </section>
 
@@ -327,6 +335,39 @@ function lookupAcclim(table, reportMin, sectorIdx){
 
 const REPORT_OFFSETS = { standard:{fc:{base:85,outstation:65},cc:{base:90,outstation:65}}, lrv:{fc:{base:85,outstation:75},cc:{base:90,outstation:75}} };
 
+function labelBracket(s,e){
+  function h(m){ m=((m%1440)+1440)%1440; return String(Math.floor(m/60)).padStart(2,'0')+String(m%60).padStart(2,'0'); }
+  return h(s)+'-'+h(e>1440?e-1440:e-1);
+}
+function renderFDPTable(acclim, table, tableNA, reportMin, sectorIdx, prevRest){
+  const cols = 8;
+  let head = '<tr><th>'+(acclim==='yes'?'Report time':'Prev rest')+'</th>';
+  for(let i=1;i<=cols;i++) head += '<th>'+(i===cols?'8+':i)+'</th>';
+  head += '</tr>';
+  let rows = '';
+  if(acclim==='yes'){
+    const mNorm = ((reportMin%1440)+1440)%1440;
+    table.forEach(([s,e,arr])=>{
+      const isRowHit = (e<=1440) ? (mNorm>=s && mNorm<e) : (mNorm>=s || mNorm<(e-1440));
+      let row = '<tr class="'+(isRowHit?'hlrow':'')+'"><td>'+labelBracket(s,e)+'</td>';
+      arr.forEach((v,i)=>{ const hit = isRowHit && i===Math.min(sectorIdx,arr.length-1); row += '<td class="'+(hit?'hlcell':'')+'">'+v+'</td>'; });
+      rows += row+'</tr>';
+    });
+  } else {
+    const bracket = (prevRest<=18||prevRest>30) ? "leq18_or_gt30" : "18to30";
+    const labels = {"leq18_or_gt30":"<=18h or >30h", "18to30":"18-30h"};
+    ["leq18_or_gt30","18to30"].forEach(key=>{
+      const arr = tableNA[key];
+      const isRowHit = key===bracket;
+      let row = '<tr class="'+(isRowHit?'hlrow':'')+'"><td>'+labels[key]+'</td>';
+      arr.forEach((v,i)=>{ const hit = isRowHit && i===Math.min(sectorIdx,arr.length-1); row += '<td class="'+(hit?'hlcell':'')+'">'+v+'</td>'; });
+      row += (arr.length<cols ? '<td colspan="'+(cols-arr.length)+'">-</td>' : '');
+      rows += row+'</tr>';
+    });
+  }
+  return '<table class="ref lookuptbl"><thead>'+head+'</thead><tbody>'+rows+'</tbody></table>';
+}
+
 function twoPilotFold(sectorHours, acclim){
   if(sectorHours<=7) return null;
   if(sectorHours<=9) return acclim==='yes' ? 2 : 4;
@@ -386,6 +427,7 @@ function calcFDP(){
   let warns="";
   if(effectiveSectors>=99) warns += '<div class="warn-box red">This combination is not covered by the standard 2-pilot table. Check sector length / acclimatisation, or plan an augmenting pilot.</div>';
   document.getElementById('fdpWarnings').innerHTML = warns;
+  document.getElementById('fdpTableWrap').innerHTML = renderFDPTable(acclim, table, tableNA, reportMin, sectorIdx, prevRest);
 }
 ['stdTime','sectors','prevRest','longestSector','extHours'].forEach(id=>document.getElementById(id).addEventListener('input', calcFDP));
 document.querySelectorAll('#crewCountRow input,#acclimRow input,#memberTypeRow input,#locRow input,#extRow input,#ruleTypeRow input').forEach(r=>r.addEventListener('change', calcFDP));

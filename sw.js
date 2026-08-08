@@ -1,5 +1,5 @@
-const CACHE = 'b777-v45';
-const ASSETS = ['./', './index.html', './questions.js', './supabase.js', './manifest.json', './icon192.png', './icon512.png'];
+const CACHE = 'b777-v46';
+const ASSETS = ['./', './index.html', './questions.js', './supabase.js', './manifest.json', './icon192.png', './icon512.png', './duty-manager.html'];
 
 self.addEventListener('install', function(e){
   e.waitUntil(caches.open(CACHE).then(function(c){ return c.addAll(ASSETS.map(function(u){ return new Request(u, {cache:'reload'}); })); }));
@@ -31,7 +31,7 @@ self.addEventListener('fetch', function(e){
     e.respondWith(fetch(e.request).catch(function(){ return new Response('{"version":"0"}', {headers:{'Content-Type':'application/json'}}); }));
     return;
   }
-  var isNav = e.request.mode === 'navigate' || e.request.url.indexOf('index.html') > -1;
+  var isNav = (e.request.mode === 'navigate' || e.request.url.indexOf('index.html') > -1) && e.request.url.indexOf('duty-manager.html') === -1;
   if(isNav){
     // Offline-first: serve the cached app instantly, refresh it in the background.
     e.respondWith((async function(){
