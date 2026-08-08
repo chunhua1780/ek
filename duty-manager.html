@@ -43,7 +43,7 @@
   @media (max-width:620px){.grid,.grid3{grid-template-columns:1fr;}}
 
   label{display:block; font-size:12px; color:var(--muted); margin-bottom:5px; font-weight:600;}
-  select, input[type=time], input[type=number]{width:100%; background:var(--panel-2); border:1px solid var(--line-bright); color:var(--text); font-family:var(--mono); font-size:14px; padding:9px 10px; border-radius:7px; margin-bottom:12px;}
+  select, input[type=time], input[type=number], input.time24{width:100%; background:var(--panel-2); border:1px solid var(--line-bright); color:var(--text); font-family:var(--mono); font-size:14px; padding:9px 10px; border-radius:7px; margin-bottom:12px; font-variant-numeric:tabular-nums; letter-spacing:0.5px;}
   select:focus, input:focus{outline:2px solid var(--green); outline-offset:1px; border-color:var(--green);}
 
   .radio-row{display:flex; gap:8px; margin-bottom:12px; flex-wrap:wrap;}
@@ -123,7 +123,7 @@
     <div class="card">
       <h2>Flight Details</h2>
       <div class="grid">
-        <div><label for="stdTime">Departure time STD (local)</label><input type="time" id="stdTime" value="10:25"></div>
+        <div><label for="stdTime">Departure time STD (local, 24h)</label><input type="text" id="stdTime" class="time24" inputmode="numeric" maxlength="5" placeholder="HH:MM" value="10:25" autocomplete="off"></div>
         <div><label for="sectors">Planned number of sectors</label><input type="number" id="sectors" value="1" min="1" max="10"></div>
       </div>
       <label>Applicable scheme</label>
@@ -170,6 +170,14 @@
       </div>
       <div class="warn-box info" id="foldingNote"></div>
       <div style="overflow-x:auto; margin-top:10px;"><svg id="fdpSectorSvg" viewBox="0 0 900 420" style="width:100%; min-width:640px; height:auto;"></svg></div>
+      <table class="ref lookuptbl" style="margin-top:12px;">
+        <thead><tr><th>Longest sector</th><th>Acclimatised</th><th>Not acclimatised</th></tr></thead>
+        <tbody id="foldTableBody">
+          <tr id="foldRow79"><td>&gt;7h and ≤9h</td><td class="mono" data-col="yes">2 sectors</td><td class="mono" data-col="no">4 sectors</td></tr>
+          <tr id="foldRow911"><td>&gt;9h and ≤11h</td><td class="mono" data-col="yes">3 sectors</td><td class="mono" data-col="no">4 sectors</td></tr>
+          <tr id="foldRow11plus"><td>&gt;11h</td><td class="mono" data-col="yes">4 sectors</td><td class="mono" data-col="no">not applicable</td></tr>
+        </tbody>
+      </table>
     </div>
 
     <div class="card">
@@ -200,37 +208,37 @@
     <div class="card">
       <h2>Three time inputs (local time)</h2>
       <div class="grid3">
-        <div><label for="sbyStart2">Standby start time</label><input type="time" id="sbyStart2" value="22:00"></div>
-        <div><label for="callTime2">Call time (crew notified)</label><input type="time" id="callTime2" value="02:00"></div>
-        <div><label for="stdTime2">Estimated departure STD</label><input type="time" id="stdTime2" value="05:30"></div>
+        <div><label for="sbyStart2">Standby start time (24h)</label><input type="text" id="sbyStart2" class="time24" inputmode="numeric" maxlength="5" placeholder="HH:MM" value="22:00" autocomplete="off"></div>
+        <div><label for="callTime2">Call time (24h)</label><input type="text" id="callTime2" class="time24" inputmode="numeric" maxlength="5" placeholder="HH:MM" value="02:00" autocomplete="off"></div>
+        <div><label for="stdTime2">Estimated departure STD (24h)</label><input type="text" id="stdTime2" class="time24" inputmode="numeric" maxlength="5" placeholder="HH:MM" value="05:30" autocomplete="off"></div>
       </div>
       <div class="warn-box info">Assumes flight crew, Dubai base, standard scheme, single sector, acclimatised — Report Time = STD − 1:25.</div>
     </div>
 
     <div class="card">
-      <h2>Result</h2>
-      <div class="result" id="sbyResult"></div>
-      <div id="sbyWarnings"></div>
+      <h2 class="n2">Step 1 — Diagram 1: Standby FDP Decision Tree</h2>
+      <div style="overflow-x:auto;"><svg id="flowSvg" viewBox="0 0 1020 460" style="width:100%; min-width:860px; height:auto;"></svg></div>
     </div>
 
     <div class="card">
-      <h2 class="n2">FDP Table Used (Report Time vs SBY Start)</h2>
+      <h2 class="n2">Step 2 — Diagram 2: Sector Count Determination (reference, 7.9.3)</h2>
+      <div style="overflow-x:auto;"><svg id="sectorSvg" viewBox="0 0 900 420" style="width:100%; min-width:640px; height:auto;"></svg></div>
+    </div>
+
+    <div class="card">
+      <h2 class="n2">Step 3 — FDP Table Used (Report Time vs SBY Start)</h2>
       <div style="overflow-x:auto;"><div id="sbyTableWrap"></div></div>
       <div class="warn-box info" style="margin-top:10px;">Blue row = table value at Report Time. Amber row = table value at SBY Start. The lower of the two ("more limiting") is what outcomes 3/4 use.</div>
     </div>
 
     <div class="card">
-      <h2 class="n2">Diagram 1 — Standby FDP Decision Tree</h2>
-      <div style="overflow-x:auto;"><svg id="flowSvg" viewBox="0 0 1020 460" style="width:100%; min-width:860px; height:auto;"></svg></div>
+      <h2>Step 4 — Result</h2>
+      <div class="result" id="sbyResult"></div>
+      <div id="sbyWarnings"></div>
     </div>
 
     <div class="card">
-      <h2 class="n2">Diagram 2 — Sector Count Determination (reference, 7.9.3)</h2>
-      <div style="overflow-x:auto;"><svg id="sectorSvg" viewBox="0 0 900 420" style="width:100%; min-width:640px; height:auto;"></svg></div>
-    </div>
-
-    <div class="card">
-      <h2 class="n3">Diagram 3 — Duty Timeline</h2>
+      <h2 class="n3">Diagram 3 — Duty Timeline (overview)</h2>
       <div style="overflow-x:auto;"><svg id="timelineSvg" viewBox="0 0 1000 220" style="width:100%; min-width:700px; height:auto;"></svg></div>
     </div>
   </section>
@@ -339,6 +347,29 @@ function toMin(hhmm){ const [h,m]=hhmm.split(':').map(Number); return h*60+m; }
 function fmt(mins){ mins=((mins%1440)+1440)%1440; const h=Math.floor(mins/60).toString().padStart(2,'0'); const m=Math.round(mins%60).toString().padStart(2,'0'); return h+':'+m; }
 function fmtDur(hrs){ const h=Math.floor(hrs); const m=Math.round((hrs-h)*60); return h+'h'+(m?' '+m+'m':''); }
 
+// ================= 24-HOUR TIME INPUT (no AM/PM, ever) =================
+function attachTime24(el){
+  el.addEventListener('input', function(){
+    var digits = el.value.replace(/[^0-9]/g,'').slice(0,4);
+    var h = digits.slice(0,2), m = digits.slice(2,4);
+    if(h.length===2 && parseInt(h,10)>23) h='23';
+    if(m.length===2 && parseInt(m,10)>59) m='59';
+    el.value = m.length ? (h+':'+m) : h;
+  });
+  el.addEventListener('blur', function(){
+    var digits = el.value.replace(/[^0-9]/g,'');
+    if(!digits.length){ el.value = el.defaultValue || '00:00'; el.dispatchEvent(new Event('input')); return; }
+    var h = digits.slice(0,2).padEnd(2,'0');
+    var m = digits.slice(2,4).padEnd(2,'0');
+    var hn = Math.min(23, parseInt(h,10)||0);
+    var mn = Math.min(59, parseInt(m,10)||0);
+    el.value = String(hn).padStart(2,'0')+':'+String(mn).padStart(2,'0');
+    el.dispatchEvent(new Event('input'));
+  });
+}
+document.querySelectorAll('input.time24').forEach(attachTime24);
+
+
 function lookupAcclim(table, reportMin, sectorIdx){
   let m = ((reportMin%1440)+1440)%1440;
   for(const [s,e,arr] of table){
@@ -439,6 +470,14 @@ function calcFDP(){
   }
   document.getElementById('foldingNote').textContent = crewCount==='2' ? (longestSector>7 ? foldNote : "Longest sector <=7h - no folding needed, use actual sector count.") : "Not applicable — 7.9.3 only applies to a 2-pilot crew.";
   drawSectorDiagram('fdpSectorSvg', crewCount, longestSector, acclim);
+  ['foldRow79','foldRow911','foldRow11plus'].forEach(id=>document.getElementById(id).classList.remove('hlrow'));
+  document.querySelectorAll('#foldTableBody td[data-col]').forEach(td=>td.classList.remove('hlcell'));
+  if(crewCount==='2' && longestSector>7){
+    const rowId = longestSector<=9 ? 'foldRow79' : (longestSector<=11 ? 'foldRow911' : 'foldRow11plus');
+    document.getElementById(rowId).classList.add('hlrow');
+    const cell = document.querySelector('#'+rowId+' td[data-col="'+acclim+'"]');
+    if(cell) cell.classList.add('hlcell');
+  }
 
   const sectorIdx = Math.min(effectiveSectors-1,7);
   const table = memberType==='fc'?FC_ACCLIM:CC_ACCLIM;
