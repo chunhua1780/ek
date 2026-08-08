@@ -213,7 +213,7 @@
         <div><label for="stdTime2">Estimated departure STD (24h)</label><input type="text" id="stdTime2" class="time24" inputmode="numeric" maxlength="5" placeholder="HH:MM" value="05:30" autocomplete="off"></div>
       </div>
       <div class="warn-box info">Time inputs decide how much standby time you've used up. The flight profile below decides how much FDP you have left. Both together give the final answer.</div>
-      <div class="warn-box amber">Note on 7.14.3: the "6-hour" Case A/B threshold is measured here from SBY Start to <b>Report Time</b> (per 7.14's "standby ends when you report" rule). The manual's wording is ambiguous about whether this checkpoint should instead be measured to the <b>Call Time</b> in edge cases (called early, but took a while to report). Verify with Flight Ops if your scenario sits near that boundary.</div>
+      <div class="warn-box info">Per 7.14: standby duty ends when you report at the designated reporting point — not when you're called. So Call Time only affects the notice-given check (7.14.1); the 6-hour Case A/B threshold and the standby duration itself are always measured SBY Start &rarr; <b>Report Time</b>.</div>
     </div>
 
     <div class="card">
