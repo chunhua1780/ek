@@ -1039,7 +1039,7 @@ function setupServiceWorker(){
   if(!('serviceWorker' in navigator)) return;
   if(offlineAllowed()){
     window.addEventListener('load', function(){
-      navigator.serviceWorker.register('./sw.js').then(function(reg){
+      navigator.serviceWorker.register('./sw.js', {updateViaCache:'none'}).then(function(reg){
         // Force check for updates on every load (fixes Safari stale SW)
         reg.update();
         // If a new SW is waiting, activate it immediately
@@ -2076,7 +2076,7 @@ async function downloadOffline(){
       if(!resp.ok) throw new Error('HTTP '+resp.status+' on '+OFFLINE_ASSETS[i]);
       await c.put(OFFLINE_ASSETS[i], resp);
     }
-    if('serviceWorker' in navigator){ try{ navigator.serviceWorker.register('sw.js'); }catch(e){} }
+    if('serviceWorker' in navigator){ try{ navigator.serviceWorker.register('sw.js', {updateViaCache:'none'}); }catch(e){} }
     st.textContent = '\u2705 Done \u2014 this device now works fully offline. Test it in airplane mode!';
     btn.textContent = 'Re-download';
   }catch(e){
@@ -2180,7 +2180,7 @@ async function renderAdmin(){
 
 
 // ═══ Smart Version Check (auto-update, keeps offline working) ═══
-var APP_VERSION = '46';  // must match version.json — bump on every deploy
+var APP_VERSION = '47';  // must match version.json — bump on every deploy
 async function checkVersion(){
   // Only run online; offline we happily use the cached app.
   if(!navigator.onLine) return;

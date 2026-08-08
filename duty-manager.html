@@ -71,6 +71,14 @@
   table.lookuptbl tr.hlrow td{background:rgba(106,184,255,0.08);}
   table.lookuptbl tr.hlrow td:first-child{color:var(--blue); font-weight:700;}
   table.lookuptbl td.hlcell{background:rgba(92,255,177,0.18)!important; color:var(--green); font-weight:800; border:1px solid var(--green); border-radius:4px;}
+  table.lookuptbl tr.hlrow-blue td{background:rgba(106,184,255,0.08);}
+  table.lookuptbl tr.hlrow-blue td:first-child{color:var(--blue); font-weight:700;}
+  table.lookuptbl td.hlcell-blue{background:rgba(106,184,255,0.22)!important; color:var(--blue); font-weight:800; border:1px solid var(--blue); border-radius:4px;}
+  table.lookuptbl tr.hlrow-amber td{background:rgba(255,201,74,0.08);}
+  table.lookuptbl tr.hlrow-amber td:first-child{color:var(--amber); font-weight:700;}
+  table.lookuptbl td.hlcell-amber{background:rgba(255,201,74,0.22)!important; color:var(--amber); font-weight:800; border:1px solid var(--amber); border-radius:4px;}
+  table.lookuptbl .hlrow-blue-tag{font-size:9px; color:var(--blue); font-family:var(--mono);}
+  table.lookuptbl .hlrow-amber-tag{font-size:9px; color:var(--amber); font-family:var(--mono);}
 
   .bar{position:relative; height:26px; border-radius:6px; background:var(--panel-2); border:1px solid var(--line-bright); overflow:hidden; margin-top:6px;}
   .bar-fill{position:absolute; top:0; bottom:0; left:0; background:linear-gradient(90deg, var(--green), #34caa0);}
@@ -161,6 +169,7 @@
         <div></div>
       </div>
       <div class="warn-box info" id="foldingNote"></div>
+      <div style="overflow-x:auto; margin-top:10px;"><svg id="fdpSectorSvg" viewBox="0 0 900 420" style="width:100%; min-width:640px; height:auto;"></svg></div>
     </div>
 
     <div class="card">
@@ -202,6 +211,12 @@
       <h2>Result</h2>
       <div class="result" id="sbyResult"></div>
       <div id="sbyWarnings"></div>
+    </div>
+
+    <div class="card">
+      <h2 class="n2">FDP Table Used (Report Time vs SBY Start)</h2>
+      <div style="overflow-x:auto;"><div id="sbyTableWrap"></div></div>
+      <div class="warn-box info" style="margin-top:10px;">Blue row = table value at Report Time. Amber row = table value at SBY Start. The lower of the two ("more limiting") is what outcomes 3/4 use.</div>
     </div>
 
     <div class="card">
@@ -368,6 +383,30 @@ function renderFDPTable(acclim, table, tableNA, reportMin, sectorIdx, prevRest){
   return '<table class="ref lookuptbl"><thead>'+head+'</thead><tbody>'+rows+'</tbody></table>';
 }
 
+function renderFDPTableMulti(table, highlights){
+  const cols = 8;
+  let head = '<tr><th>Time bracket</th>';
+  for(let i=1;i<=cols;i++) head += '<th>'+(i===cols?'8+':i)+'</th>';
+  head += '</tr>';
+  let rows = '';
+  table.forEach(([s,e,arr])=>{
+    const hits = highlights.filter(h=>{
+      const m = ((h.min%1440)+1440)%1440;
+      return (e<=1440) ? (m>=s && m<e) : (m>=s || m<(e-1440));
+    });
+    const rowCls = hits.map(h=>h.rowCls).join(' ');
+    const tagsHtml = hits.map(h=>'<span class="'+h.rowCls+'-tag">'+h.tag+'</span>').join(' ');
+    let row = '<tr class="'+rowCls+'"><td>'+labelBracket(s,e)+(tagsHtml?'<br>'+tagsHtml:'')+'</td>';
+    arr.forEach((v,i)=>{
+      const cellHits = hits.filter(h=>i===(h.sectorIdx||0));
+      const cls = cellHits.map(h=>h.cellCls).join(' ');
+      row += '<td class="'+cls+'">'+v+'</td>';
+    });
+    rows += row+'</tr>';
+  });
+  return '<table class="ref lookuptbl"><thead>'+head+'</thead><tbody>'+rows+'</tbody></table>';
+}
+
 function twoPilotFold(sectorHours, acclim){
   if(sectorHours<=7) return null;
   if(sectorHours<=9) return acclim==='yes' ? 2 : 4;
@@ -387,7 +426,7 @@ function calcFDP(){
   const ruleType = document.querySelector('#ruleTypeRow input:checked').value;
   document.getElementById('lrvHint').style.display = ruleType==='lrv' ? 'flex' : 'none';
   document.getElementById('notAcclimWrap').style.display = acclim==='no' ? 'grid' : 'none';
-  document.getElementById('twoPilotCard').style.display = crewCount==='2' ? 'block' : 'none';
+  // twoPilotCard stays visible for reference regardless of crew count
 
   const offsetMin = REPORT_OFFSETS[ruleType][memberType][loc];
   const reportMin = stdMin - offsetMin;
@@ -398,7 +437,8 @@ function calcFDP(){
     if(folded===null){ foldNote="Sector >11h and not acclimatised: table does not apply for a 2-pilot crew — requires an augmenting pilot."; effectiveSectors=99; }
     else { effectiveSectors = Math.max(sectors, folded); foldNote = "Longest sector " + longestSector + "h (" + (acclim==='yes'?'acclimatised':'not acclimatised') + ") folded to " + folded + " sectors per 7.9.3."; }
   }
-  document.getElementById('foldingNote').textContent = crewCount==='2' ? (longestSector>7 ? foldNote : "Longest sector <=7h - no folding needed, use actual sector count.") : "";
+  document.getElementById('foldingNote').textContent = crewCount==='2' ? (longestSector>7 ? foldNote : "Longest sector <=7h - no folding needed, use actual sector count.") : "Not applicable — 7.9.3 only applies to a 2-pilot crew.";
+  drawSectorDiagram('fdpSectorSvg', crewCount, longestSector, acclim);
 
   const sectorIdx = Math.min(effectiveSectors-1,7);
   const table = memberType==='fc'?FC_ACCLIM:CC_ACCLIM;
@@ -481,8 +521,12 @@ function calcStandby(){
   document.getElementById('sbyWarnings').innerHTML = warns;
 
   drawFlowchart(q1,q2,q3,useLeft,outcome);
-  drawSectorDiagram();
+  drawSectorDiagram('sectorSvg', '2', 0, 'yes');
   drawTimeline(startMin,callMin,reportMinNorm,stdMin,offDutyMin,sbyHours);
+  document.getElementById('sbyTableWrap').innerHTML = renderFDPTableMulti(FC_ACCLIM, [
+    {min:reportMinNorm, sectorIdx:0, rowCls:'hlrow-blue', cellCls:'hlcell-blue', tag:'Report'},
+    {min:startMin, sectorIdx:0, rowCls:'hlrow-amber', cellCls:'hlcell-amber', tag:'SBY Start'}
+  ]);
 }
 
 // ---- Diagram 1: flowchart (orthogonal routing) ----
@@ -556,40 +600,52 @@ function drawFlowchart(q1,q2,q3,useLeft,outcome){
   svg.innerHTML = html;
 }
 
-// ---- Diagram 2: sector reference ----
-function drawSectorDiagram(){
-  const svg = document.getElementById('sectorSvg');
-  function d(cx,cy,w,h,t){return '<polygon class="node-diamond" points="'+cx+','+(cy-h/2)+' '+(cx+w/2)+','+cy+' '+cx+','+(cy+h/2)+' '+(cx-w/2)+','+cy+'"/><text class="node-label dim" x="'+cx+'" y="'+(cy+4)+'" text-anchor="middle">'+t+'</text>';}
-  function b(x,y,w,h,t){return '<rect class="node-box" x="'+x+'" y="'+y+'" width="'+w+'" height="'+h+'" rx="6"/><text class="node-outcome" x="'+(x+w/2)+'" y="'+(y+h/2+4)+'" text-anchor="middle">'+t+'</text>';}
-  function e(x1,y1,x2,y2,label){return '<path class="edge" d="M'+x1+','+y1+' L'+x2+','+y2+'" marker-end="url(#arrow2)"/><text class="edge-label" x="'+((x1+x2)/2)+'" y="'+((y1+y2)/2-6)+'" text-anchor="middle">'+label+'</text>';}
+// ---- Diagram 2: sector / 7.9.3 folding decision tree (reusable, path-highlighted) ----
+function drawSectorDiagram(svgId, crewCount, longestSector, acclim){
+  const svg = document.getElementById(svgId);
+  if(!svg) return;
+  const A = (cond)=> cond ? 'active' : '';
+  function d(cx,cy,w,h,t,active){return '<polygon class="node-diamond '+A(active)+'" points="'+cx+','+(cy-h/2)+' '+(cx+w/2)+','+cy+' '+cx+','+(cy+h/2)+' '+(cx-w/2)+','+cy+'"/><text class="node-label '+(active?'':'dim')+'" x="'+cx+'" y="'+(cy+4)+'" text-anchor="middle">'+t+'</text>';}
+  function b(x,y,w,h,lines,active){
+    let out = '<rect class="node-box '+A(active)+'" x="'+x+'" y="'+y+'" width="'+w+'" height="'+h+'" rx="6"/>';
+    lines.forEach((l,i)=>{ out += '<text class="node-outcome" x="'+(x+w/2)+'" y="'+(y+h/2-6+i*15+(lines.length===1?6:0))+'" text-anchor="middle">'+l+'</text>'; });
+    return out;
+  }
+  function e(x1,y1,x2,y2,label,active){return '<path class="edge '+A(active)+'" d="M'+x1+','+y1+' L'+x2+','+y2+'"/><text class="edge-label '+A(active)+'" x="'+((x1+x2)/2)+'" y="'+((y1+y2)/2-6)+'" text-anchor="middle">'+label+'</text>';}
 
-  let html = '<defs><marker id="arrow2" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#2a3a46"/></marker></defs>';
-  html += d(450,40,240,60,"Crew = 2 pilots?");
-  html += e(450,70,450,120,"YES");
-  html += e(560,40,780,40,"NO");
-  html += b(690,15,180,50,"Use actual sectors");
+  // determine path
+  const is2Pilot = crewCount==='2';
+  const sectorGt7 = longestSector>7;
+  const foldRange = longestSector<=9 ? '7-9' : (longestSector<=11 ? '9-11' : '>11');
+  const fold2p = is2Pilot && sectorGt7;
 
-  html += d(450,160,240,60,"Longest sector > 7h?");
-  html += e(450,190,450,240,"YES");
-  html += e(560,160,780,160,"NO");
-  html += b(690,135,180,50,"Use actual sectors");
+  let html = '<defs><marker id="arrow2" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#2a3a46"/></marker>'+
+    '<marker id="arrow2a" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#5cffb1"/></marker></defs>';
 
-  html += d(450,280,200,60,"Acclimatised?");
-  html += e(360,280,180,280,"YES");
-  html += e(540,280,720,280,"NO");
+  function eActive(x1,y1,x2,y2,label,active){
+    return '<path class="edge '+A(active)+'" d="M'+x1+','+y1+' L'+x2+','+y2+'" marker-end="url(#'+(active?'arrow2a':'arrow2')+')"/><text class="edge-label '+A(active)+'" x="'+((x1+x2)/2)+'" y="'+((y1+y2)/2-6)+'" text-anchor="middle">'+label+'</text>';
+  }
 
-  html += '<rect class="node-box" x="60" y="320" width="230" height="80" rx="6"/>'+
-    '<text class="node-outcome" x="175" y="342" text-anchor="middle">7-9h -&gt; 2 sectors</text>'+
-    '<text class="node-outcome" x="175" y="360" text-anchor="middle">9-11h -&gt; 3 sectors</text>'+
-    '<text class="node-outcome" x="175" y="378" text-anchor="middle">&gt;11h -&gt; 4 sectors</text>';
-  html += '<rect class="node-box" x="610" y="320" width="230" height="80" rx="6"/>'+
-    '<text class="node-outcome" x="725" y="342" text-anchor="middle">7-9h -&gt; 4 sectors</text>'+
-    '<text class="node-outcome" x="725" y="360" text-anchor="middle">9-11h -&gt; 4 sectors</text>'+
-    '<text class="node-outcome" x="725" y="378" text-anchor="middle">&gt;11h -&gt; not applicable</text>';
+  html += d(450,40,240,60,"Crew = 2 pilots?", true);
+  html += eActive(450,70,450,120,"YES", is2Pilot);
+  html += eActive(560,40,780,40,"NO", !is2Pilot);
+  html += b(690,15,180,50,["Use actual sectors"], !is2Pilot);
+
+  html += d(450,160,240,60,"Longest sector > 7h?", is2Pilot);
+  html += eActive(450,190,450,240,"YES", is2Pilot&&sectorGt7);
+  html += eActive(560,160,780,160,"NO", is2Pilot&&!sectorGt7);
+  html += b(690,135,180,50,["Use actual sectors"], is2Pilot&&!sectorGt7);
+
+  html += d(450,280,200,60,"Acclimatised?", fold2p);
+  html += eActive(360,280,180,280,"YES", fold2p&&acclim==='yes');
+  html += eActive(540,280,720,280,"NO", fold2p&&acclim==='no');
+
+  html += b(60,320,230,80,["7-9h -> 2 sectors","9-11h -> 3 sectors",">11h -> 4 sectors"], fold2p&&acclim==='yes');
+  html += b(610,320,230,80,["7-9h -> 4 sectors","9-11h -> 4 sectors",">11h -> not applicable"], fold2p&&acclim==='no');
 
   svg.innerHTML = html;
+  return { fold2p, foldRange, acclim };
 }
-
 // ---- Diagram 3: duty timeline ----
 function drawTimeline(startMin,callMin,reportMin,stdMin,offDutyMin,sbyHours){
   const svg = document.getElementById('timelineSvg');
