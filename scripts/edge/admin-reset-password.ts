@@ -1,6 +1,7 @@
 // Supabase Edge Function: admin-reset-password
 // Only callable by a logged-in user whose app_metadata.b777_admin === true.
-// Resets ANY user's password to a freshly generated temp password and returns it.
+// Resets a user's password to 123456 (or an admin-supplied password) and
+// flags the account so the user is forced to set their own password on next sign-in.
 // Deploy: Dashboard -> Edge Functions -> Deploy new function -> name it exactly: admin-reset-password
 import { createClient } from 'npm:@supabase/supabase-js@2'
 
@@ -11,13 +12,7 @@ const cors = {
 function json(o: unknown, s = 200) {
   return new Response(JSON.stringify(o), { status: s, headers: { ...cors, 'content-type': 'application/json' } })
 }
-function genPassword() {
-  // 10 chars, avoids ambiguous look-alikes
-  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789'
-  let out = ''
-  for (let i = 0; i < 10; i++) out += chars[Math.floor(Math.random() * chars.length)]
-  return out
-}
+const DEFAULT_TEMP_PASSWORD = '123456'
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors })
@@ -40,8 +35,11 @@ Deno.serve(async (req) => {
     if (!user_id) return json({ error: 'Missing user_id' }, 400)
 
     const admin = createClient(url, serviceKey)
-    const pw = (new_password && String(new_password).length >= 6) ? String(new_password) : genPassword()
-    const { error } = await admin.auth.admin.updateUserById(user_id, { password: pw })
+    const pw = (new_password && String(new_password).length >= 6) ? String(new_password) : DEFAULT_TEMP_PASSWORD
+    const { error } = await admin.auth.admin.updateUserById(user_id, {
+      password: pw,
+      user_metadata: { must_change_password: true },
+    })
     if (error) return json({ error: error.message }, 400)
 
     return json({ ok: true, new_password: pw })

@@ -1773,6 +1773,47 @@ function enterApp(){
     if(w) w.textContent = st ? ('Staff ' + st) : 'Signed in';
   }catch(e){}
   show('home'); renderHome();
+  checkMustChangePassword();
+}
+async function checkMustChangePassword(){
+  try{
+    var u = await sb.auth.getUser();
+    var meta = u && u.data && u.data.user && u.data.user.user_metadata;
+    if(meta && meta.must_change_password){ showForceChangePasswordModal(); }
+  }catch(e){}
+}
+function showForceChangePasswordModal(){
+  if(document.getElementById('forcePwModal')) return;
+  var div = document.createElement('div');
+  div.id = 'forcePwModal';
+  div.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;';
+  div.innerHTML =
+    '<div style="background:var(--card,#161b22);color:var(--fg,#e6edf3);border-radius:14px;padding:24px;max-width:360px;width:100%;box-shadow:0 10px 40px rgba(0,0,0,.4);">' +
+      '<h3 style="margin:0 0 8px;font-size:17px;">Set a new password</h3>' +
+      '<p style="margin:0 0 16px;font-size:13px;color:var(--sub,#8b949e);line-height:1.5;">Your password was reset by an admin to a temporary one. Please set your own password to continue using the app.</p>' +
+      '<input id="fpNew1" type="password" placeholder="New password (min 6 chars)" style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--line,#30363d);background:var(--bg2,#0d1117);color:inherit;margin-bottom:10px;box-sizing:border-box;font-size:14px;">' +
+      '<input id="fpNew2" type="password" placeholder="Confirm new password" style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--line,#30363d);background:var(--bg2,#0d1117);color:inherit;margin-bottom:14px;box-sizing:border-box;font-size:14px;">' +
+      '<div id="fpMsg" style="font-size:12px;color:#ff6b6b;min-height:16px;margin-bottom:10px;"></div>' +
+      '<button id="fpSubmit" style="width:100%;padding:11px;border-radius:9px;border:none;background:#2f81f7;color:#fff;font-weight:600;cursor:pointer;font-size:14px;">Set Password</button>' +
+    '</div>';
+  document.body.appendChild(div);
+  document.getElementById('fpSubmit').onclick = submitForceChangePassword;
+  document.getElementById('fpNew2').addEventListener('keydown', function(e){ if(e.key==='Enter') submitForceChangePassword(); });
+}
+async function submitForceChangePassword(){
+  var p1 = document.getElementById('fpNew1').value;
+  var p2 = document.getElementById('fpNew2').value;
+  var msg = document.getElementById('fpMsg');
+  if(p1.length < 6){ msg.textContent = 'Password must be at least 6 characters.'; return; }
+  if(p1 !== p2){ msg.textContent = 'Passwords do not match.'; return; }
+  if(p1 === '123456'){ msg.textContent = 'Please choose something other than the temporary password.'; return; }
+  var btn = document.getElementById('fpSubmit');
+  btn.disabled = true; btn.textContent = 'Saving\u2026';
+  var r = await sb.auth.updateUser({ password: p1, data: { must_change_password: false } });
+  btn.disabled = false; btn.textContent = 'Set Password';
+  if(r.error){ msg.textContent = r.error.message; return; }
+  var modal = document.getElementById('forcePwModal');
+  if(modal) modal.remove();
 }
 async function initAuth(){
   if(!sb){ enterApp(); return; } // never lock users out if the auth library fails
@@ -2116,7 +2157,7 @@ function fmtDur(sec){
 }
 function openAdmin(){ show('admin'); renderAdmin(); }
 async function adminResetPw(userId, label){
-  var pw = prompt('Set new password for '+label+' (leave blank to auto-generate a random one, min 6 chars):', '');
+  var pw = prompt('Set new password for '+label+' (leave blank to reset to the default temporary password 123456, min 6 chars):', '');
   if(pw === null) return; // cancelled
   pw = pw.trim();
   if(pw && pw.length < 6){ alert('Password must be at least 6 characters.'); return; }
@@ -2127,7 +2168,7 @@ async function adminResetPw(userId, label){
     alert('Failed: ' + (r.error ? r.error.message : r.data.error));
     return;
   }
-  alert('Password reset for '+label+'. New password: ' + r.data.new_password);
+  alert('Password reset for '+label+'. New password: ' + r.data.new_password + '\n\nThey will be prompted to set their own password the next time they sign in.');
 }
 async function renderAdmin(){
   var today = new Date().toISOString().slice(0,10);
