@@ -212,7 +212,43 @@
         <div><label for="callTime2">Call time (24h)</label><input type="text" id="callTime2" class="time24" inputmode="numeric" maxlength="5" placeholder="HH:MM" value="02:00" autocomplete="off"></div>
         <div><label for="stdTime2">Estimated departure STD (24h)</label><input type="text" id="stdTime2" class="time24" inputmode="numeric" maxlength="5" placeholder="HH:MM" value="05:30" autocomplete="off"></div>
       </div>
-      <div class="warn-box info">Assumes flight crew, Dubai base, standard scheme, single sector, acclimatised — Report Time = STD − 1:25.</div>
+      <div class="warn-box info">Time inputs decide how much standby time you've used up. The flight profile below decides how much FDP you have left. Both together give the final answer.</div>
+      <div class="warn-box amber">Note on 7.14.3: the "6-hour" Case A/B threshold is measured here from SBY Start to <b>Report Time</b> (per 7.14's "standby ends when you report" rule). The manual's wording is ambiguous about whether this checkpoint should instead be measured to the <b>Call Time</b> in edge cases (called early, but took a while to report). Verify with Flight Ops if your scenario sits near that boundary.</div>
+    </div>
+
+    <div class="card">
+      <h2 class="n2">Flight profile</h2>
+      <div class="grid">
+        <div>
+          <label for="sbyCrewCount">Crew size</label>
+          <select id="sbyCrewCount">
+            <option value="2" selected>2 pilots</option>
+            <option value="3plus">3/4-pilot augmented</option>
+          </select>
+        </div>
+        <div>
+          <label for="sbySectors">Number of sectors</label>
+          <input type="number" id="sbySectors" value="1" min="1" max="10">
+        </div>
+      </div>
+      <div class="grid">
+        <div>
+          <label for="sbyLongestSector">Longest single sector (hours)</label>
+          <input type="number" id="sbyLongestSector" value="5" step="0.5" min="0">
+        </div>
+        <div>
+          <label for="sbyAcclim">Acclimatised?</label>
+          <select id="sbyAcclim">
+            <option value="yes" selected>Yes</option>
+            <option value="no">No</option>
+          </select>
+        </div>
+      </div>
+      <div class="grid" id="sbyPrevRestWrap" style="display:none;">
+        <div><label for="sbyPrevRest">Previous rest period before standby (hours)</label><input type="number" id="sbyPrevRest" value="24" step="0.5" min="0"></div>
+        <div></div>
+      </div>
+      <div class="warn-box info" id="sbyFoldingNote"></div>
     </div>
 
     <div class="card">
@@ -438,6 +474,32 @@ function renderFDPTableMulti(table, highlights){
   return '<table class="ref lookuptbl"><thead>'+head+'</thead><tbody>'+rows+'</tbody></table>';
 }
 
+function renderFDPTableMultiAny(acclim, prevRest, highlights){
+  if(acclim==='yes') return renderFDPTableMulti(FC_ACCLIM, highlights);
+  const cols = 8;
+  const bracket = (prevRest<=18||prevRest>30) ? "leq18_or_gt30" : "18to30";
+  const labels = {"leq18_or_gt30":"<=18h or >30h", "18to30":"18-30h"};
+  let head = '<tr><th>Prev rest</th>';
+  for(let i=1;i<=cols;i++) head += '<th>'+(i===cols?'8+':i)+'</th>';
+  head += '</tr>';
+  let rows = '';
+  ["leq18_or_gt30","18to30"].forEach(key=>{
+    const arr = FC_NOTACCLIM[key];
+    const isRowHit = key===bracket;
+    const rowCls = isRowHit ? highlights.map(h=>h.rowCls).join(' ') : '';
+    const tagsHtml = isRowHit ? highlights.map(h=>'<span class="'+h.rowCls+'-tag">'+h.tag+'</span>').join(' ') : '';
+    let row = '<tr class="'+rowCls+'"><td>'+labels[key]+(tagsHtml?'<br>'+tagsHtml:'')+'</td>';
+    arr.forEach((v,i)=>{
+      const cellHits = isRowHit ? highlights.filter(h=>i===(h.sectorIdx||0)) : [];
+      const cls = cellHits.map(h=>h.cellCls).join(' ');
+      row += '<td class="'+cls+'">'+v+'</td>';
+    });
+    if(arr.length<cols) row += '<td colspan="'+(cols-arr.length)+'">-</td>';
+    rows += row+'</tr>';
+  });
+  return '<table class="ref lookuptbl"><thead>'+head+'</thead><tbody>'+rows+'</tbody></table>';
+}
+
 function twoPilotFold(sectorHours, acclim){
   if(sectorHours<=7) return null;
   if(sectorHours<=9) return acclim==='yes' ? 2 : 4;
@@ -514,10 +576,36 @@ document.querySelectorAll('#crewCountRow input,#acclimRow input,#memberTypeRow i
 // ================= STANDBY + 3 DIAGRAMS =================
 function diffHoursWrap(startMin,endMin){ let d=endMin-startMin; if(d<0) d+=1440; return d/60; }
 
+function fdpTableLookup(acclim, prevRest, timeMin, sectorIdx){
+  if(acclim==='yes') return lookupAcclim(FC_ACCLIM, timeMin, sectorIdx);
+  const bracket = (prevRest<=18||prevRest>30) ? "leq18_or_gt30" : "18to30";
+  const arr = FC_NOTACCLIM[bracket];
+  return arr[Math.min(sectorIdx, arr.length-1)];
+}
+
 function calcStandby(){
   const startMin = toMin(document.getElementById('sbyStart2').value||"22:00");
   const callMin = toMin(document.getElementById('callTime2').value||"02:00");
   const stdMin = toMin(document.getElementById('stdTime2').value||"05:30");
+
+  const crewCount = document.getElementById('sbyCrewCount').value;
+  const sectors = Math.max(1, Number(document.getElementById('sbySectors').value||1));
+  const longestSector = Number(document.getElementById('sbyLongestSector').value||0);
+  const acclim = document.getElementById('sbyAcclim').value;
+  const prevRest = Number(document.getElementById('sbyPrevRest').value||24);
+  document.getElementById('sbyPrevRestWrap').style.display = acclim==='no' ? 'grid' : 'none';
+
+  // 7.9.3 two-pilot long-sector folding — same logic as the FDP tab
+  let effectiveSectors = sectors, foldNote = "";
+  if(crewCount==='2' && longestSector>7){
+    const folded = twoPilotFold(longestSector, acclim);
+    if(folded===null){ foldNote = "Sector >11h and not acclimatised: 2-pilot table does not apply — needs an augmenting pilot."; effectiveSectors = 99; }
+    else { effectiveSectors = Math.max(sectors, folded); foldNote = "Longest sector "+longestSector+"h ("+(acclim==='yes'?'acclimatised':'not acclimatised')+") folded to "+folded+" sectors per 7.9.3."; }
+  } else {
+    foldNote = crewCount==='2' ? "Longest sector <=7h — no folding needed, use actual sector count." : "Not applicable — 7.9.3 only applies to a 2-pilot crew.";
+  }
+  document.getElementById('sbyFoldingNote').textContent = foldNote;
+  const sectorIdx = Math.min(effectiveSectors-1, 7);
 
   const reportMin = stdMin - 85;
   const reportMinNorm = ((reportMin%1440)+1440)%1440;
@@ -532,8 +620,8 @@ function calcStandby(){
   const useLeft = q1 && q2;
   const q3 = sbyHours>=6;
 
-  const tableAtReport = lookupAcclim(FC_ACCLIM, reportMinNorm, 0);
-  const tableAtSbyStart = lookupAcclim(FC_ACCLIM, startMin, 0);
+  const tableAtReport = fdpTableLookup(acclim, prevRest, reportMinNorm, sectorIdx);
+  const tableAtSbyStart = fdpTableLookup(acclim, prevRest, startMin, sectorIdx);
   const moreLimiting = Math.min(tableAtReport, tableAtSbyStart);
 
   let outcome, fdpValue, formula;
@@ -553,6 +641,7 @@ function calcStandby(){
     '<div class="result-row"><span class="k">Standby duration (Start to Report — standby ends at Report Time per 7.14)</span><span class="v">'+fmtDur(sbyHours)+'</span></div>'+
     '<div class="result-row"><span class="k">Report Time (STD - 1:25)</span><span class="v blue">'+fmt(reportMinNorm)+'</span></div>'+
     '<div class="result-row"><span class="k">Notice given (Call to Report)</span><span class="v">'+fmtDur(noticeMin/60)+'</span></div>'+
+    '<div class="result-row"><span class="k">Effective sectors used for table lookup</span><span class="v">'+(effectiveSectors>=99?'n/a':effectiveSectors)+'</span></div>'+
     '<div class="result-row"><span class="k">Path taken</span><span class="v green">Outcome '+outcome+'</span></div>'+
     '<div class="result-row"><span class="k">Formula</span><span class="v" style="font-size:12px;font-weight:600;color:var(--amber)">'+formula+'</span></div>'+
     '<div class="result-row"><span class="k">Allowable FDP</span><span class="v green">'+fmtDur(fdpValue)+'</span></div>'+
@@ -560,14 +649,15 @@ function calcStandby(){
     '<div class="result-row"><span class="k">Min rest afterwards</span><span class="v green">'+fmtDur(minNextRest)+'</span></div>';
   let warns="";
   if(sbyHours>12) warns += '<div class="warn-box red">Standby duration exceeds the 12h maximum (7.14.3).</div>';
+  if(effectiveSectors>=99) warns += '<div class="warn-box red">This combination is not covered by the standard 2-pilot table. Check sector length / acclimatisation, or plan an augmenting pilot.</div>';
   document.getElementById('sbyWarnings').innerHTML = warns;
 
   drawFlowchart(q1,q2,q3,useLeft,outcome);
-  drawSectorDiagram('sectorSvg', '2', 0, 'yes');
+  drawSectorDiagram('sectorSvg', crewCount, longestSector, acclim);
   drawTimeline(startMin,callMin,reportMinNorm,stdMin,offDutyMin,sbyHours);
-  document.getElementById('sbyTableWrap').innerHTML = renderFDPTableMulti(FC_ACCLIM, [
-    {min:reportMinNorm, sectorIdx:0, rowCls:'hlrow-blue', cellCls:'hlcell-blue', tag:'Report'},
-    {min:startMin, sectorIdx:0, rowCls:'hlrow-amber', cellCls:'hlcell-amber', tag:'SBY Start'}
+  document.getElementById('sbyTableWrap').innerHTML = renderFDPTableMultiAny(acclim, prevRest, [
+    {min:reportMinNorm, sectorIdx:sectorIdx, rowCls:'hlrow-blue', cellCls:'hlcell-blue', tag:'Report'},
+    {min:startMin, sectorIdx:sectorIdx, rowCls:'hlrow-amber', cellCls:'hlcell-amber', tag:'SBY Start'}
   ]);
 }
 
@@ -731,7 +821,8 @@ function drawTimeline(startMin,callMin,reportMin,stdMin,offDutyMin,sbyHours){
   svg.innerHTML = html;
 }
 
-['sbyStart2','callTime2','stdTime2'].forEach(id=>document.getElementById(id).addEventListener('input', calcStandby));
+['sbyStart2','callTime2','stdTime2','sbySectors','sbyLongestSector','sbyPrevRest'].forEach(id=>document.getElementById(id).addEventListener('input', calcStandby));
+document.querySelectorAll('#sbyCrewCount, #sbyAcclim').forEach(el=>el.addEventListener('change', calcStandby));
 
 // ================= REST =================
 function calcRest(){
