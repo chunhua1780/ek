@@ -630,25 +630,39 @@
 
     <!-- INPUT SECTION: Altitude & Atmosphere -->
     <div class="calc-section">
-      <div class="title">Atmosphere & Altitude</div>
+      <div class="title">Atmosphere & Altitude (near-runway approach values)</div>
       <div class="calc-row">
         <div class="calc-input">
           <label>QNH (auto-detect: 29.92/1013)</label>
           <input type="number" id="qnh" placeholder="29.92" step="0.01" oninput="calcAll()">
         </div>
         <div class="calc-input">
-          <label>Indicated Alt (ft)</label>
+          <label>Aerodrome Elevation / Altitude (ft)</label>
           <input type="number" id="indAlt" placeholder="0" oninput="calcAll()">
         </div>
       </div>
       <div class="calc-row">
         <div class="calc-input">
-          <label>OAT (°C)</label>
+          <label>Temperature (°C)</label>
           <input type="number" id="oat" placeholder="0" oninput="calcAll()">
         </div>
         <div class="calc-input">
           <label>IAS (knots)</label>
           <input type="number" id="ias" placeholder="0" oninput="calcAll()">
+        </div>
+      </div>
+      <label style="display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--sub);margin-top:4px;cursor:pointer;">
+        <input type="checkbox" id="advOverride" onchange="toggleAdvOverride()" style="width:auto;margin:0;">
+        Use a different elevation/temperature for the VPA table (e.g. checking descent rate at a higher altitude)
+      </label>
+      <div class="calc-row" id="advOverrideWrap" style="display:none;margin-top:8px;">
+        <div class="calc-input">
+          <label>VPA Table Elevation (ft)</label>
+          <input type="number" id="aeroElev" placeholder="0" step="100" oninput="calcAll()">
+        </div>
+        <div class="calc-input">
+          <label>VPA Table Temperature (°C)</label>
+          <input type="number" id="rwyTemp" placeholder="15" oninput="calcAll()">
         </div>
       </div>
     </div>
@@ -662,18 +676,8 @@
           <input type="number" id="finalTrack" placeholder="180" min="0" max="360" oninput="calcAll()">
         </div>
         <div class="calc-input">
-          <label>Wind Direction (°FROM)</label>
-          <input type="number" id="windDir" placeholder="270" min="0" max="360" oninput="calcAll()">
-        </div>
-      </div>
-      <div class="calc-row">
-        <div class="calc-input">
-          <label>Wind Speed (knots)</label>
-          <input type="number" id="windSpeed" placeholder="0" oninput="calcAll()">
-        </div>
-        <div class="calc-input">
-          <label>Aerodrome Temperature (°C) — VPA table input</label>
-          <input type="number" id="rwyTemp" placeholder="15" oninput="calcAll()">
+          <label>Wind (dir/speed, e.g. 270/27)</label>
+          <input type="text" id="windCombo" placeholder="270/27" oninput="calcAll()">
         </div>
       </div>
     </div>
@@ -687,15 +691,11 @@
           <input type="number" id="stdAngle" placeholder="3.0" step="0.1" oninput="calcAll()">
         </div>
         <div class="calc-input">
-          <label>Aerodrome Elevation (ft)</label>
-          <input type="number" id="aeroElev" placeholder="0" step="100" oninput="calcAll()">
-        </div>
-      </div>
-      <div class="calc-row">
-        <div class="calc-input">
           <label>Distance to Runway (NM)</label>
           <input type="number" id="distRwy" placeholder="0" oninput="calcAll()">
         </div>
+      </div>
+      <div class="calc-row full">
         <div class="calc-input">
           <label>RNP Level</label>
           <select id="rnpLevel" onchange="calcAll()" style="padding:8px 10px;border:1px solid var(--border);border-radius:8px;background:var(--card);color:var(--text);">
@@ -766,6 +766,18 @@
     <div class="calc-section">
       <div class="title">Step-by-Step Calculation</div>
       <div id="calcSteps" style="font-size:12px;line-height:1.7;"></div>
+    </div>
+
+    <div class="calc-section">
+      <div class="title">VPA Table Lookup — Visualized</div>
+      <div style="font-size:10.5px;color:var(--sub);margin-bottom:8px;">Blue = bounding temperature rows. Amber = bounding elevation column. Green = interpolated result.</div>
+      <div style="overflow-x:auto;"><div id="vpaTableViz"></div></div>
+    </div>
+
+    <div class="calc-section">
+      <div class="title">ROD Chart Lookup — Visualized</div>
+      <div style="font-size:10.5px;color:var(--sub);margin-bottom:8px;">Blue = bounding glide-path rows. Amber = bounding ground-speed column. Green = interpolated result.</div>
+      <div style="overflow-x:auto;"><div id="rodTableViz"></div></div>
     </div>
 
     <div style="padding:10px;background:rgba(255,200,0,.1);border-radius:8px;margin-top:10px;font-size:11px;color:var(--sub);">
@@ -2411,6 +2423,63 @@ function rodOutOfRange(glidePath, gs){
   return msgs;
 }
 
+// ═══ Crosshair table visualization (shows the actual row/column being interpolated) ═══
+function findBounds(val, axis){
+  if(val<=axis[0]) return {loIdx:0,hiIdx:0,frac:0};
+  if(val>=axis[axis.length-1]) return {loIdx:axis.length-1,hiIdx:axis.length-1,frac:0};
+  for(var i=0;i<axis.length-1;i++){
+    if(val>=axis[i] && val<=axis[i+1]){
+      return {loIdx:i, hiIdx:i+1, frac:(val-axis[i])/(axis[i+1]-axis[i])};
+    }
+  }
+  return {loIdx:axis.length-1,hiIdx:axis.length-1,frac:0};
+}
+function renderCrosshairTable(rowAxis, colAxis, dataFn, rowVal, colVal, resultText, opts){
+  opts = opts || {};
+  var rb = findBounds(rowVal, rowAxis);
+  var cb = findBounds(colVal, colAxis);
+  var rShowLo = Math.max(0, rb.loIdx-1), rShowHi = Math.min(rowAxis.length-1, rb.hiIdx+1);
+  var cShowLo = Math.max(0, cb.loIdx-1), cShowHi = Math.min(colAxis.length-1, cb.hiIdx+1);
+
+  var html = '<table class="ref lookuptbl" style="font-size:11px;"><thead><tr><th>'+(opts.cornerLabel||'')+'</th>';
+  for(var c=cShowLo;c<=cShowHi;c++){
+    var isColBound = (c===cb.loIdx || c===cb.hiIdx);
+    html += '<th class="'+(isColBound?'hlrow-amber':'')+'">'+colAxis[c]+(opts.colUnit||'')+'</th>';
+  }
+  html += '</tr></thead><tbody>';
+  for(var r=rShowLo;r<=rShowHi;r++){
+    var isRowBound = (r===rb.loIdx || r===rb.hiIdx);
+    html += '<tr class="'+(isRowBound?'hlrow-blue':'')+'"><td>'+rowAxis[r]+(opts.rowUnit||'')+'</td>';
+    for(var c=cShowLo;c<=cShowHi;c++){
+      var isColBound2 = (c===cb.loIdx || c===cb.hiIdx);
+      var isCorner = isRowBound && isColBound2;
+      var v = dataFn(r,c);
+      html += '<td class="'+(isCorner?'hlcell':'')+'">'+v+'</td>';
+    }
+    html += '</tr>';
+  }
+  html += '</tbody></table>';
+
+  var rowFracText = (rb.loIdx===rb.hiIdx)
+    ? ('Row value clamped to nearest table row: ' + rowAxis[rb.loIdx] + (opts.rowUnit||''))
+    : ('Row fraction t = (' + rowVal.toFixed(opts.rowDec!==undefined?opts.rowDec:1) + ' − ' + rowAxis[rb.loIdx] + ') / (' + rowAxis[rb.hiIdx] + ' − ' + rowAxis[rb.loIdx] + ') = ' + rb.frac.toFixed(3));
+  var colFracText = (cb.loIdx===cb.hiIdx)
+    ? ('Column value clamped to nearest table column: ' + colAxis[cb.loIdx] + (opts.colUnit||''))
+    : ('Column fraction t = (' + colVal.toFixed(opts.colDec!==undefined?opts.colDec:0) + ' − ' + colAxis[cb.loIdx] + ') / (' + colAxis[cb.hiIdx] + ' − ' + colAxis[cb.loIdx] + ') = ' + cb.frac.toFixed(3));
+
+  html += '<div style="margin-top:8px;font-size:11px;color:var(--sub);line-height:1.6;">' +
+    rowFracText + '<br>' + colFracText + '<br>' +
+    '<b style="color:#3fbf4f;">Interpolated result = ' + resultText + '</b>' +
+    '</div>';
+  return html;
+}
+
+function toggleAdvOverride(){
+  var on = document.getElementById('advOverride').checked;
+  document.getElementById('advOverrideWrap').style.display = on ? 'flex' : 'none';
+  calcAll();
+}
+
 function calcAll(){
   try {
     // ===== INPUT READING =====
@@ -2419,11 +2488,23 @@ function calcAll(){
     var oat = parseFloat(document.getElementById('oat').value) || 0;
     var ias = parseFloat(document.getElementById('ias').value) || 0;
     var finalTrack = parseFloat(document.getElementById('finalTrack').value) || 0;
-    var windDir = parseFloat(document.getElementById('windDir').value) || 0;
-    var windSpeed = parseFloat(document.getElementById('windSpeed').value) || 0;
-    var rwyTemp = parseFloat(document.getElementById('rwyTemp').value) || 15;
+
+    // Combined wind input "270/27" -> direction/speed
+    var windRaw = (document.getElementById('windCombo').value || '').trim();
+    var windDir = 0, windSpeed = 0;
+    if(windRaw){
+      var parts = windRaw.split('/');
+      windDir = parseFloat(parts[0]) || 0;
+      windSpeed = parts.length>1 ? (parseFloat(parts[1]) || 0) : 0;
+    }
+
+    // Elevation/Temperature used for the VPA table: same as aircraft altitude/OAT
+    // unless the advanced override checkbox is on (e.g. checking descent rate at a different altitude).
+    var advOn = document.getElementById('advOverride').checked;
+    var aeroElev = advOn ? (parseFloat(document.getElementById('aeroElev').value) || 0) : indAlt;
+    var rwyTemp = advOn ? (parseFloat(document.getElementById('rwyTemp').value) || 15) : oat;
+
     var stdAngle = parseFloat(document.getElementById('stdAngle').value) || 3.0;
-    var aeroElev = parseFloat(document.getElementById('aeroElev').value) || 0;
     var distRwy = parseFloat(document.getElementById('distRwy').value) || 0;
     var rnpLevel = parseFloat(document.getElementById('rnpLevel').value) || 1;
     
@@ -2620,6 +2701,38 @@ function calcAll(){
 
     var stepsEl = document.getElementById('calcSteps');
     if(stepsEl) stepsEl.innerHTML = steps.join('');
+
+    // ===== TABLE VISUALIZATIONS (crosshair: bounding rows/cols + interpolated result) =====
+    var vpaVizEl = document.getElementById('vpaTableViz');
+    if(vpaVizEl){
+      var nearestVpa = VPA_TABLE.vpas.reduce(function(best, v){
+        return Math.abs(v - stdAngle) < Math.abs(best - stdAngle) ? v : best;
+      }, VPA_TABLE.vpas[0]);
+      var vpaMatrix = VPA_TABLE.data[nearestVpa]; // { elevKey: [values by temp, ascending] }
+      var vpaHtml = renderCrosshairTable(
+        VPA_TABLE.temps, VPA_TABLE.elevations,
+        function(r, c){ return vpaMatrix[VPA_TABLE.elevations[c]][r]; },
+        rwyTemp, aeroElev, corrAngle.toFixed(2) + '°',
+        {cornerLabel:'Temp \\ Elev', colUnit:'ft', rowUnit:'°C', rowDec:1, colDec:0}
+      );
+      if(nearestVpa !== stdAngle){
+        vpaHtml = '<div style="font-size:10.5px;color:var(--sub);margin-bottom:6px;">Showing nearest charted-VPA column (' + nearestVpa.toFixed(1) + '°). Your entered ' + stdAngle.toFixed(2) + '° also blends toward the next VPA column in the actual calculation.</div>' + vpaHtml;
+      }
+      vpaVizEl.innerHTML = vpaHtml;
+    }
+
+    var rodVizEl = document.getElementById('rodTableViz');
+    if(rodVizEl && gs > 0){
+      var rodHtml = renderCrosshairTable(
+        ROD_TABLE.glidePaths, ROD_TABLE.speeds,
+        function(r, c){ return ROD_TABLE.data[ROD_TABLE.glidePaths[r]][c]; },
+        corrAngle, gs, Math.round(rodTable) + ' fpm',
+        {cornerLabel:'GP \\ GS', colUnit:'kt', rowUnit:'°', rowDec:2, colDec:0}
+      );
+      rodVizEl.innerHTML = rodHtml;
+    } else if(rodVizEl){
+      rodVizEl.innerHTML = '<div style="font-size:11px;color:var(--sub);">Enter wind/track and IAS to compute ground speed first.</div>';
+    }
 
   } catch(e){
     console.error('calcAll error:', e);
