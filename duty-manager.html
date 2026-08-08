@@ -124,29 +124,50 @@
       <h2>Flight Details</h2>
       <div class="grid">
         <div><label for="stdTime">Departure time STD (local, 24h)</label><input type="text" id="stdTime" class="time24" inputmode="numeric" maxlength="5" placeholder="HH:MM" value="10:25" autocomplete="off"></div>
-        <div><label for="sectors">Planned number of sectors</label><input type="number" id="sectors" value="1" min="1" max="10"></div>
+        <div id="sectorsWrap"><label for="sectors">Planned number of sectors</label><input type="number" id="sectors" value="1" min="1" max="10"></div>
       </div>
       <label>Applicable scheme</label>
       <div class="radio-row" id="ruleTypeRow">
         <label class="opt"><input type="radio" name="ruleType" value="standard" checked><span>Standard scheme</span></label>
         <label class="opt"><input type="radio" name="ruleType" value="lrv"><span>LRV (Long Range Variation)</span></label>
       </div>
-      <div class="warn-box info" id="lrvHint" style="display:none;">For LRV sectors the FDP is fixed at 18h (S1) / 20h (S2), not table-derived. This only computes the correct Report Time; use the dedicated LRV tool for actual FDP.</div>
+      <div class="warn-box info" id="lrvHint" style="display:none;">LRV does not use the 7.6.2 tables at all. FDP is fixed at 18h (S1) or 20h (S2), extendable to 22h for a 4-pilot crew under 7.E.7 unforeseen-circumstances conditions. 3-pilot crews cannot extend beyond 18h.</div>
 
-      <label>Crew size</label>
-      <div class="radio-row" id="crewCountRow">
-        <label class="opt"><input type="radio" name="crewCount" value="2" checked><span>2 pilots</span></label>
-        <label class="opt"><input type="radio" name="crewCount" value="3plus"><span>3/4-pilot augmented</span></label>
+      <div id="standardOnlyWrap">
+        <label>Crew size</label>
+        <div class="radio-row" id="crewCountRow">
+          <label class="opt"><input type="radio" name="crewCount" value="2" checked><span>2 pilots</span></label>
+          <label class="opt"><input type="radio" name="crewCount" value="3plus"><span>3/4-pilot augmented</span></label>
+        </div>
+
+        <label>Acclimatised?</label>
+        <div class="radio-row" id="acclimRow">
+          <label class="opt"><input type="radio" name="acclim" value="yes" checked><span>Yes</span></label>
+          <label class="opt"><input type="radio" name="acclim" value="no"><span>No</span></label>
+        </div>
+        <div id="notAcclimWrap" class="grid">
+          <div><label for="prevRest">Previous rest period (hours)</label><input type="number" id="prevRest" value="24" step="0.5" min="0"></div>
+          <div></div>
+        </div>
       </div>
 
-      <label>Acclimatised?</label>
-      <div class="radio-row" id="acclimRow">
-        <label class="opt"><input type="radio" name="acclim" value="yes" checked><span>Yes</span></label>
-        <label class="opt"><input type="radio" name="acclim" value="no"><span>No</span></label>
-      </div>
-      <div id="notAcclimWrap" class="grid">
-        <div><label for="prevRest">Previous rest period (hours)</label><input type="number" id="prevRest" value="24" step="0.5" min="0"></div>
-        <div></div>
+      <div id="lrvOnlyWrap" style="display:none;">
+        <label>Segment</label>
+        <div class="radio-row" id="lrvSegmentRow">
+          <label class="opt"><input type="radio" name="lrvSegment" value="S1" checked><span>S1 (block &le;16h)</span></label>
+          <label class="opt"><input type="radio" name="lrvSegment" value="S2"><span>S2 (block &gt;16h)</span></label>
+        </div>
+        <label>Flight crew configuration</label>
+        <div class="radio-row" id="lrvCrewRow">
+          <label class="opt"><input type="radio" name="lrvCrew" value="3"><span>3-pilot (1CA+2FO)</span></label>
+          <label class="opt"><input type="radio" name="lrvCrew" value="4" checked><span>4-pilot (2CA+2FO)</span></label>
+        </div>
+        <div class="grid">
+          <div><label for="lrvDelay">Projected delay (minutes) — for extension eligibility</label><input type="number" id="lrvDelay" value="0" min="0"></div>
+          <div><label for="lrvCrc">CRC (crew rest compartment) available?</label>
+            <select id="lrvCrc"><option value="yes">Yes</option><option value="no">No / unserviceable</option></select>
+          </div>
+        </div>
       </div>
 
       <label>Crew member type</label>
@@ -180,7 +201,7 @@
       </table>
     </div>
 
-    <div class="card">
+    <div class="card" id="extCard">
       <h2 class="n3">On-board rest / split duty extension (optional)</h2>
       <div class="radio-row" id="extRow">
         <label class="opt"><input type="radio" name="ext" value="none" checked><span>No extension</span></label>
@@ -197,7 +218,7 @@
       <div id="fdpWarnings"></div>
     </div>
 
-    <div class="card">
+    <div class="card" id="fdpTableCard">
       <h2 class="n2">FDP Table Used (highlighted)</h2>
       <div style="overflow-x:auto;"><div id="fdpTableWrap"></div></div>
     </div>
@@ -508,6 +529,17 @@ function twoPilotFold(sectorHours, acclim){
 }
 
 function calcFDP(){
+  const ruleType = document.querySelector('#ruleTypeRow input:checked').value;
+  document.getElementById('lrvHint').style.display = ruleType==='lrv' ? 'flex' : 'none';
+  document.getElementById('standardOnlyWrap').style.display = ruleType==='lrv' ? 'none' : 'block';
+  document.getElementById('lrvOnlyWrap').style.display = ruleType==='lrv' ? 'block' : 'none';
+  document.getElementById('sectorsWrap').style.display = ruleType==='lrv' ? 'none' : 'block';
+  document.getElementById('twoPilotCard').style.display = ruleType==='lrv' ? 'none' : 'block';
+  document.getElementById('extCard').style.display = ruleType==='lrv' ? 'none' : 'block';
+  document.getElementById('fdpTableCard').style.display = ruleType==='lrv' ? 'none' : 'block';
+
+  if(ruleType==='lrv'){ calcFDPLRV(); return; }
+
   const stdMin = toMin(document.getElementById('stdTime').value||"10:25");
   const sectors = Math.max(1, Number(document.getElementById('sectors').value||1));
   const crewCount = document.querySelector('#crewCountRow input:checked').value;
@@ -516,10 +548,7 @@ function calcFDP(){
   const memberType = document.querySelector('#memberTypeRow input:checked').value;
   const longestSector = Number(document.getElementById('longestSector').value||0);
   const loc = document.querySelector('#locRow input:checked').value;
-  const ruleType = document.querySelector('#ruleTypeRow input:checked').value;
-  document.getElementById('lrvHint').style.display = ruleType==='lrv' ? 'flex' : 'none';
   document.getElementById('notAcclimWrap').style.display = acclim==='no' ? 'grid' : 'none';
-  // twoPilotCard stays visible for reference regardless of crew count
 
   const offsetMin = REPORT_OFFSETS[ruleType][memberType][loc];
   const reportMin = stdMin - offsetMin;
@@ -570,8 +599,62 @@ function calcFDP(){
   document.getElementById('fdpWarnings').innerHTML = warns;
   document.getElementById('fdpTableWrap').innerHTML = renderFDPTable(acclim, table, tableNA, reportMin, sectorIdx, prevRest);
 }
-['stdTime','sectors','prevRest','longestSector','extHours'].forEach(id=>document.getElementById(id).addEventListener('input', calcFDP));
-document.querySelectorAll('#crewCountRow input,#acclimRow input,#memberTypeRow input,#locRow input,#extRow input,#ruleTypeRow input').forEach(r=>r.addEventListener('change', calcFDP));
+
+// ================= LRV MODE (7.E) — no 7.6.2 tables at all =================
+function calcFDPLRV(){
+  const stdMin = toMin(document.getElementById('stdTime').value||"10:25");
+  const memberType = document.querySelector('#memberTypeRow input:checked').value;
+  const loc = document.querySelector('#locRow input:checked').value;
+  const segment = document.querySelector('#lrvSegmentRow input:checked').value;
+  const crew = document.querySelector('#lrvCrewRow input:checked').value;
+  const delay = Number(document.getElementById('lrvDelay').value||0);
+  const crc = document.getElementById('lrvCrc').value;
+
+  const offsetMin = REPORT_OFFSETS.lrv[memberType][loc];
+  const reportMin = stdMin - offsetMin;
+  const offsetH=Math.floor(offsetMin/60), offsetM=offsetMin%60;
+
+  const baseFDP = segment==='S1' ? 18*60 : 20*60; // in minutes for precision, convert to hours below
+  let maxFDPmin = baseFDP;
+  let extendedAvailable = false, extReason = "";
+  if(crew==='3'){
+    maxFDPmin = 18*60; // hard cap, no extension ever (7.E.7)
+  } else {
+    if(loc==='base' && delay>0 && delay<=240){ extendedAvailable = true; extReason = "Dubai departure, projected delay \u2264 4h — meets 7.E.7 extension trigger."; }
+    else if(loc==='outstation'){ extendedAvailable = true; extReason = "Outstation departure — may apply 7.E.7 extension subject to rest-facility conditions."; }
+    if(extendedAvailable) maxFDPmin = 22*60;
+  }
+  const maxFDP = maxFDPmin/60;
+  const baseFDPh = baseFDP/60;
+  const cabinFDP = baseFDPh + 5/60; // FC FDP + 5 min, ex-DXB only
+
+  const offDuty = reportMin + maxFDPmin;
+
+  document.getElementById('fdpResult').innerHTML =
+    '<div class="result-row"><span class="k">Report time (STD - '+offsetH+'h'+offsetM.toString().padStart(2,'0')+'m)</span><span class="v blue">'+fmt(reportMin)+'</span></div>'+
+    '<div class="result-row"><span class="k">Segment</span><span class="v '+(segment==='S1'?'green':'amber')+'">'+segment+'</span></div>'+
+    '<div class="result-row"><span class="k">Base max FDP (no extension)</span><span class="v">'+fmtDur(baseFDPh)+'</span></div>'+
+    '<div class="result-row"><span class="k">Cabin crew FDP cap (base+5min, ex-DXB only)</span><span class="v">'+fmtDur(cabinFDP)+'</span></div>'+
+    '<div class="result-row"><span class="k">Final max FDP</span><span class="v green">'+fmtDur(maxFDP)+'</span></div>'+
+    '<div class="result-row"><span class="k">Latest off-duty time</span><span class="v blue">'+fmt(offDuty)+'</span></div>';
+
+  let warns = "";
+  if(crew==='3'){
+    warns += '<div class="warn-box info">3-pilot crew: FDP hard-capped at 18h. No extension permitted under any circumstances (7.E.7).</div>';
+  } else if(extendedAvailable){
+    warns += '<div class="warn-box amber">4-pilot crew may extend to 22h: '+extReason+' Commander must still assess crew alertness; any extension beyond '+(segment==='S1'?'18h':'20h')+' must be reported to the GCAA POI (7.E.9 f).</div>';
+  } else {
+    warns += '<div class="warn-box info">Extension conditions not currently met (4-pilot crew needs Dubai delay \u2264 4h, or an outstation departure).</div>';
+  }
+  if(crc==='no'){
+    warns += '<div class="warn-box amber">CRC unavailable: seat-blocking policy per OM-A 7.7.1.2 applies, and rest strategy must be reviewed (7.E.4).</div>';
+  }
+  document.getElementById('fdpWarnings').innerHTML = warns;
+}
+
+['stdTime','sectors','prevRest','longestSector','extHours','lrvDelay'].forEach(id=>document.getElementById(id).addEventListener('input', calcFDP));
+document.querySelectorAll('#crewCountRow input,#acclimRow input,#memberTypeRow input,#locRow input,#extRow input,#ruleTypeRow input,#lrvSegmentRow input,#lrvCrewRow input').forEach(r=>r.addEventListener('change', calcFDP));
+document.getElementById('lrvCrc').addEventListener('change', calcFDP);
 
 // ================= STANDBY + 3 DIAGRAMS =================
 function diffHoursWrap(startMin,endMin){ let d=endMin-startMin; if(d<0) d+=1440; return d/60; }
