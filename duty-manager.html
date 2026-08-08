@@ -180,8 +180,8 @@
 
       <label>Report location</label>
       <div class="radio-row" id="locRow">
-        <label class="opt"><input type="radio" name="loc" value="base" checked><span>Dubai base</span></label>
-        <label class="opt"><input type="radio" name="loc" value="outstation"><span>Outstation</span></label>
+        <label class="opt"><input type="radio" name="loc" value="base" checked><span>DXB</span></label>
+        <label class="opt"><input type="radio" name="loc" value="outstation"><span>Non-DXB</span></label>
       </div>
     </div>
 
@@ -192,8 +192,8 @@
         Reporting time delayed while still at rest location?
       </label>
       <div class="grid" id="delayInputsWrap" style="display:none;margin-top:10px;">
-        <div><label for="delayHours">Delay — hours</label><input type="number" id="delayHours" value="0" min="0" oninput="calcFDP()"></div>
-        <div><label for="delayMinutes">Delay — minutes</label><input type="number" id="delayMinutes" value="0" min="0" max="59" oninput="calcFDP()"></div>
+        <div><label for="actualStdTime">Actual / revised departure time STD (24h)</label><input type="text" id="actualStdTime" class="time24" inputmode="numeric" maxlength="5" placeholder="HH:MM" value="10:25" autocomplete="off"></div>
+        <div></div>
       </div>
       <div class="warn-box info" id="delayNote" style="margin-top:8px; display:none;"></div>
     </div>
@@ -607,17 +607,24 @@ function calcFDP(){
   document.getElementById('fdpTableCard').style.display = ruleType==='lrv' ? 'none' : 'block';
   document.getElementById('discretionCard').style.display = ruleType==='lrv' ? 'none' : 'block';
 
-  // ---- shared: delay inputs (7.12) ----
+  // ---- shared: delay inputs (7.12) — delay is derived from actual vs scheduled STD ----
   const delayEnabled = document.getElementById('delayEnabled').checked;
-  const delayHours = Number(document.getElementById('delayHours').value||0);
-  const delayMinutesVal = Number(document.getElementById('delayMinutes').value||0);
-  const delayMin = delayEnabled ? (delayHours*60 + delayMinutesVal) : 0;
+  const schedStdMinForDelay = toMin(document.getElementById('stdTime').value||"10:25");
+  const actualStdMin = toMin(document.getElementById('actualStdTime').value||document.getElementById('stdTime').value||"10:25");
+  let delayMin = 0;
+  if(delayEnabled){
+    delayMin = actualStdMin - schedStdMinForDelay;
+    if(delayMin < 0) delayMin += 1440; // wrapped past midnight
+  }
   const bucket712 = classify712(delayMin);
   const delayNoteEl = document.getElementById('delayNote');
   if(delayEnabled && delayMin>0){
     delayNoteEl.style.display = 'block';
     const labels = {'7.12.1.1':'7.12.1.1 (delay < 4h): FDP cap unchanged, but starts at ACTUAL report time.','7.12.1.2':'7.12.1.2 (4h \u2264 delay < 10h): FDP cap = the more restrictive of scheduled vs actual report time; FDP starts at original report time + 4h.','7.12.2':'7.12.2 (delay \u2265 10h): this period is reclassified as REST. Recompute fresh from the new (actual) report time \u2014 no delay penalty applies.'};
-    delayNoteEl.textContent = labels[bucket712];
+    delayNoteEl.textContent = 'Delay = ' + fmtDur(delayMin/60) + '. ' + labels[bucket712];
+  } else if(delayEnabled){
+    delayNoteEl.style.display = 'block';
+    delayNoteEl.textContent = 'Actual departure time matches scheduled \u2014 no delay.';
   } else {
     delayNoteEl.style.display = 'none';
   }
@@ -752,7 +759,7 @@ function calcFDP(){
   }
   fStep('Scheduled Report Time', 'Report = STD \u2212 offset', 'Report = ' + fmt(stdMin) + ' \u2212 ' + offsetH+'h'+offsetM.toString().padStart(2,'0')+'m', '= ' + fmt(originalReportMin));
   if(delayMin>0){
-    fStep('Delay Classification (7.12)', 'Delay < 4h \u2192 7.12.1.1 | 4h\u201310h \u2192 7.12.1.2 | \u226510h \u2192 7.12.2', 'Delay = ' + delayHours + 'h ' + delayMinutesVal + 'm = ' + fmtDur(delayMin/60), delay712Text);
+    fStep('Delay Classification (7.12)', 'Delay < 4h \u2192 7.12.1.1 | 4h\u201310h \u2192 7.12.1.2 | \u226510h \u2192 7.12.2', 'Scheduled STD ' + fmt(schedStdMinForDelay) + ', actual STD ' + fmt(actualStdMin) + ' \u2192 delay = ' + fmtDur(delayMin/60), delay712Text);
   }
   fStep('Table Lookup / Cap', bucket712==='7.12.1.2' ? 'Cap = min(table(scheduled), table(actual))' : 'Cap = table(report time, sectors, acclimatisation)', basisText, '= ' + fmtDur(cap));
   fStep('FDP Start Time', bucket712==='7.12.1.2' ? 'Start = original report + 4h' : (bucket712==='7.12.1.1'||bucket712==='7.12.2' ? 'Start = actual report time' : 'Start = scheduled report time'), '', '= ' + fmt(fdpStartMin));
@@ -854,7 +861,7 @@ function calcFDPLRV(delayEnabled, delayMin, bucket712){
   if(fStepsEl) fStepsEl.innerHTML = fSteps.join('');
 }
 
-['stdTime','sectors','prevRest','longestSector','extHours','lrvDelay','delayHours','delayMinutes','discHours'].forEach(id=>document.getElementById(id).addEventListener('input', calcFDP));
+['stdTime','sectors','prevRest','longestSector','extHours','lrvDelay','actualStdTime','discHours'].forEach(id=>document.getElementById(id).addEventListener('input', calcFDP));
 document.querySelectorAll('#crewCountRow input,#acclimRow input,#memberTypeRow input,#locRow input,#extRow input,#ruleTypeRow input,#lrvSegmentRow input,#lrvCrewRow input').forEach(r=>r.addEventListener('change', calcFDP));
 document.getElementById('lrvCrc').addEventListener('change', calcFDP);
 
