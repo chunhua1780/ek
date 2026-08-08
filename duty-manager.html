@@ -185,6 +185,32 @@
       </div>
     </div>
 
+    <div class="card">
+      <h2 class="n3">Delayed Reporting (7.12)</h2>
+      <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;">
+        <input type="checkbox" id="delayEnabled" onchange="toggleDelayInputs()" style="width:auto;margin:0;">
+        Reporting time delayed while still at rest location?
+      </label>
+      <div class="grid" id="delayInputsWrap" style="display:none;margin-top:10px;">
+        <div><label for="delayHours">Delay — hours</label><input type="number" id="delayHours" value="0" min="0" oninput="calcFDP()"></div>
+        <div><label for="delayMinutes">Delay — minutes</label><input type="number" id="delayMinutes" value="0" min="0" max="59" oninput="calcFDP()"></div>
+      </div>
+      <div class="warn-box info" id="delayNote" style="margin-top:8px; display:none;"></div>
+    </div>
+
+    <div class="card" id="discretionCard">
+      <h2 class="n3">Commander's Discretion Extension (7.15)</h2>
+      <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;">
+        <input type="checkbox" id="discEnabled" onchange="toggleDiscInputs()" style="width:auto;margin:0;">
+        Apply commander's discretion?
+      </label>
+      <div class="grid" id="discInputsWrap" style="display:none;margin-top:10px;">
+        <div><label for="discSector">Which sector does this extension apply before?</label><select id="discSector" onchange="calcFDP()"></select></div>
+        <div><label for="discHours">Requested extension (hours)</label><input type="number" id="discHours" value="1" step="0.25" min="0" oninput="calcFDP()"></div>
+      </div>
+      <div class="warn-box info" id="discNote" style="margin-top:8px; display:none;"></div>
+    </div>
+
     <div class="card" id="twoPilotCard">
       <h2 class="n2">Two-pilot long-sector folding (7.9.3)</h2>
       <div class="grid">
@@ -223,6 +249,11 @@
     <div class="card" id="fdpTableCard">
       <h2 class="n2">FDP Table Used (highlighted)</h2>
       <div style="overflow-x:auto;"><div id="fdpTableWrap"></div></div>
+    </div>
+
+    <div class="card">
+      <h2 class="n3">Step-by-Step Calculation</h2>
+      <div id="fdpSteps" style="font-size:12px;line-height:1.7;"></div>
     </div>
   </section>
 
@@ -535,6 +566,36 @@ function twoPilotFold(sectorHours, acclim){
   return acclim==='yes' ? 4 : null;
 }
 
+function toggleDelayInputs(){
+  const on = document.getElementById('delayEnabled').checked;
+  document.getElementById('delayInputsWrap').style.display = on ? 'grid' : 'none';
+  calcFDP();
+}
+function toggleDiscInputs(){
+  const on = document.getElementById('discEnabled').checked;
+  document.getElementById('discInputsWrap').style.display = on ? 'grid' : 'none';
+  calcFDP();
+}
+function populateDiscSectorSelect(totalSectors){
+  const sel = document.getElementById('discSector');
+  const prev = sel.value;
+  sel.innerHTML = '';
+  for(let i=1;i<=Math.max(1,totalSectors);i++){
+    const opt = document.createElement('option');
+    opt.value = i;
+    opt.textContent = 'Sector ' + i + (i===totalSectors ? ' (last)' : '');
+    sel.appendChild(opt);
+  }
+  if(prev && Number(prev)<=totalSectors) sel.value = prev;
+}
+// 7.12 classification: given delay in minutes, returns {bucket, capFn(...), startOffset...}
+function classify712(delayMin){
+  if(delayMin<=0) return 'none';
+  if(delayMin<240) return '7.12.1.1';
+  if(delayMin<600) return '7.12.1.2';
+  return '7.12.2';
+}
+
 function calcFDP(){
   const ruleType = document.querySelector('#ruleTypeRow input:checked').value;
   document.getElementById('lrvHint').style.display = ruleType==='lrv' ? 'flex' : 'none';
@@ -544,8 +605,24 @@ function calcFDP(){
   document.getElementById('twoPilotCard').style.display = ruleType==='lrv' ? 'none' : 'block';
   document.getElementById('extCard').style.display = ruleType==='lrv' ? 'none' : 'block';
   document.getElementById('fdpTableCard').style.display = ruleType==='lrv' ? 'none' : 'block';
+  document.getElementById('discretionCard').style.display = ruleType==='lrv' ? 'none' : 'block';
 
-  if(ruleType==='lrv'){ calcFDPLRV(); return; }
+  // ---- shared: delay inputs (7.12) ----
+  const delayEnabled = document.getElementById('delayEnabled').checked;
+  const delayHours = Number(document.getElementById('delayHours').value||0);
+  const delayMinutesVal = Number(document.getElementById('delayMinutes').value||0);
+  const delayMin = delayEnabled ? (delayHours*60 + delayMinutesVal) : 0;
+  const bucket712 = classify712(delayMin);
+  const delayNoteEl = document.getElementById('delayNote');
+  if(delayEnabled && delayMin>0){
+    delayNoteEl.style.display = 'block';
+    const labels = {'7.12.1.1':'7.12.1.1 (delay < 4h): FDP cap unchanged, but starts at ACTUAL report time.','7.12.1.2':'7.12.1.2 (4h \u2264 delay < 10h): FDP cap = the more restrictive of scheduled vs actual report time; FDP starts at original report time + 4h.','7.12.2':'7.12.2 (delay \u2265 10h): this period is reclassified as REST. Recompute fresh from the new (actual) report time \u2014 no delay penalty applies.'};
+    delayNoteEl.textContent = labels[bucket712];
+  } else {
+    delayNoteEl.style.display = 'none';
+  }
+
+  if(ruleType==='lrv'){ calcFDPLRV(delayEnabled, delayMin, bucket712); return; }
 
   const stdMin = toMin(document.getElementById('stdTime').value||"10:25");
   const sectors = Math.max(1, Number(document.getElementById('sectors').value||1));
@@ -558,7 +635,8 @@ function calcFDP(){
   document.getElementById('notAcclimWrap').style.display = acclim==='no' ? 'grid' : 'none';
 
   const offsetMin = REPORT_OFFSETS[ruleType][memberType][loc];
-  const reportMin = stdMin - offsetMin;
+  const originalReportMin = stdMin - offsetMin;
+  const actualReportMin = originalReportMin + delayMin;
 
   let effectiveSectors = sectors, foldNote="";
   if(crewCount==='2' && longestSector>7){
@@ -580,9 +658,38 @@ function calcFDP(){
   const sectorIdx = Math.min(effectiveSectors-1,7);
   const table = memberType==='fc'?FC_ACCLIM:CC_ACCLIM;
   const tableNA = memberType==='fc'?FC_NOTACCLIM:CC_NOTACCLIM;
-  let baseFDP, basisText;
-  if(acclim==='yes'){ baseFDP=lookupAcclim(table,reportMin,sectorIdx); basisText="Report "+fmt(reportMin)+" + "+effectiveSectors+" sector(s), acclimatised table"; }
-  else { const bracket=(prevRest<=18||prevRest>30)?"leq18_or_gt30":"18to30"; const arr=tableNA[bracket]; baseFDP=arr[Math.min(effectiveSectors-1,arr.length-1)]; basisText="Prev rest "+prevRest+"h ("+(bracket==='18to30'?'18-30h':'<=18h or >30h')+") + "+effectiveSectors+" sector(s), not-acclimatised table"; }
+  function tableLookupAt(reportTimeMin){
+    if(acclim==='yes'){ return lookupAcclim(table, reportTimeMin, sectorIdx); }
+    const bracket=(prevRest<=18||prevRest>30)?"leq18_or_gt30":"18to30";
+    const arr=tableNA[bracket];
+    return arr[Math.min(effectiveSectors-1,arr.length-1)];
+  }
+  const basisText = acclim==='yes'
+    ? ("Report "+fmt(originalReportMin)+" + "+effectiveSectors+" sector(s), acclimatised table")
+    : ("Prev rest "+prevRest+"h ("+((prevRest<=18||prevRest>30)?'<=18h or >30h':'18-30h')+") + "+effectiveSectors+" sector(s), not-acclimatised table");
+
+  // ---- 7.12 overlay: determine cap and FDP start time ----
+  let cap, fdpStartMin, delay712Text;
+  if(bucket712==='none'){
+    cap = tableLookupAt(originalReportMin);
+    fdpStartMin = originalReportMin;
+    delay712Text = 'No delay \u2014 FDP starts at scheduled report time.';
+  } else if(bucket712==='7.12.1.1'){
+    cap = tableLookupAt(originalReportMin);
+    fdpStartMin = actualReportMin;
+    delay712Text = 'Delay < 4h (7.12.1.1): cap unchanged at scheduled-time value; FDP starts at actual report time.';
+  } else if(bucket712==='7.12.1.2'){
+    const capOrig = tableLookupAt(originalReportMin);
+    const capActual = tableLookupAt(actualReportMin);
+    cap = Math.min(capOrig, capActual);
+    fdpStartMin = originalReportMin + 240;
+    delay712Text = 'Delay 4h\u201310h (7.12.1.2): cap = more restrictive of scheduled (' + fmtDur(capOrig) + ') vs actual (' + fmtDur(capActual) + ') = ' + fmtDur(cap) + '; FDP starts at original report + 4h.';
+  } else { // 7.12.2
+    cap = tableLookupAt(actualReportMin);
+    fdpStartMin = actualReportMin;
+    delay712Text = 'Delay \u2265 10h (7.12.2): period reclassified as rest \u2014 recomputed fresh from the new report time, no delay penalty.';
+  }
+  const baseFDP = cap;
 
   const extType = document.querySelector('#extRow input:checked').value;
   const extHours = Number(document.getElementById('extHours').value||0);
@@ -592,23 +699,75 @@ function calcFDP(){
   else if(extType==='seat'){ if(extHours>=3){ const add=extHours/3; extendedFDP=Math.min(baseFDP+add,capSeat); extNote="Seat rest "+extHours+"h -> +"+add.toFixed(2)+"h, capped at "+capSeat+"h"; } else extNote="Needs >=3h total on-board rest (7.7.1.4)"; }
   else if(extType==='split'){ if(extHours<3) extNote="Ground rest <3h: no extension (7.7.2)"; else { const capped=Math.min(extHours,10); const add=capped/2; extendedFDP=baseFDP+add; extNote="Split duty ground rest "+extHours+"h (capped at 10h) -> +"+add.toFixed(2)+"h"; } }
 
+  // ---- 7.15 commander's discretion (standard scheme only) ----
+  populateDiscSectorSelect(effectiveSectors>=99?1:effectiveSectors);
+  const discEnabled = document.getElementById('discEnabled').checked;
+  let discApplied = 0, discNoteText = "", discMax = 0;
+  const discNoteEl = document.getElementById('discNote');
+  let finalFDP = extendedFDP;
+  if(discEnabled){
+    const discSectorNum = Number(document.getElementById('discSector').value||1);
+    const totalSec = effectiveSectors>=99?1:effectiveSectors;
+    const isLastSector = (discSectorNum===totalSec) || totalSec===1;
+    discMax = isLastSector ? 3 : 2;
+    const requested = Number(document.getElementById('discHours').value||0);
+    discApplied = Math.min(requested, discMax);
+    finalFDP = extendedFDP + discApplied;
+    discNoteText = 'Sector ' + discSectorNum + ' of ' + totalSec + (isLastSector?' (last sector)':' (not last)') + ' \u2192 max discretion ' + discMax + 'h. Requested ' + requested + 'h \u2192 applied ' + discApplied + 'h' + (requested>discMax?' (capped)':'') + '.';
+    discNoteEl.style.display = 'block';
+    discNoteEl.textContent = discNoteText;
+  } else {
+    discNoteEl.style.display = 'none';
+  }
+
   const offsetH=Math.floor(offsetMin/60), offsetM=offsetMin%60;
-  const offDuty = reportMin + extendedFDP*60;
+  const offDuty = fdpStartMin + finalFDP*60;
   document.getElementById('fdpResult').innerHTML =
-    '<div class="result-row"><span class="k">Report time (STD - '+offsetH+'h'+offsetM.toString().padStart(2,'0')+'m)</span><span class="v blue">'+fmt(reportMin)+'</span></div>'+
+    '<div class="result-row"><span class="k">Scheduled report time (STD - '+offsetH+'h'+offsetM.toString().padStart(2,'0')+'m)</span><span class="v blue">'+fmt(originalReportMin)+'</span></div>'+
+    (delayMin>0 ? '<div class="result-row"><span class="k">Actual report time (after delay)</span><span class="v blue">'+fmt(actualReportMin)+'</span></div>' : '') +
     '<div class="result-row"><span class="k">Basis</span><span class="v" style="font-size:12px;font-weight:600;color:var(--muted)">'+basisText+'</span></div>'+
-    '<div class="result-row"><span class="k">Base max FDP</span><span class="v">'+fmtDur(baseFDP)+'</span></div>'+
-    '<div class="result-row"><span class="k">Extension</span><span class="v" style="font-size:12px;font-weight:600;color:var(--amber)">'+(extNote||'-')+'</span></div>'+
-    '<div class="result-row"><span class="k">Final max FDP</span><span class="v green">'+fmtDur(extendedFDP)+'</span></div>'+
+    '<div class="result-row"><span class="k">FDP cap (before extensions)</span><span class="v">'+fmtDur(cap)+'</span></div>'+
+    '<div class="result-row"><span class="k">On-board rest extension</span><span class="v" style="font-size:12px;font-weight:600;color:var(--amber)">'+(extNote||'-')+'</span></div>'+
+    (discEnabled ? '<div class="result-row"><span class="k">Commander\'s discretion (7.15)</span><span class="v" style="font-size:12px;font-weight:600;color:var(--amber)">+'+discApplied.toFixed(2)+'h</span></div>' : '') +
+    '<div class="result-row"><span class="k">FDP starts at</span><span class="v blue">'+fmt(fdpStartMin)+'</span></div>'+
+    '<div class="result-row"><span class="k">Final max FDP</span><span class="v green">'+fmtDur(finalFDP)+'</span></div>'+
     '<div class="result-row"><span class="k">Latest off-duty time</span><span class="v blue">'+fmt(offDuty)+'</span></div>';
   let warns="";
   if(effectiveSectors>=99) warns += '<div class="warn-box red">This combination is not covered by the standard 2-pilot table. Check sector length / acclimatisation, or plan an augmenting pilot.</div>';
   document.getElementById('fdpWarnings').innerHTML = warns;
-  document.getElementById('fdpTableWrap').innerHTML = renderFDPTable(acclim, table, tableNA, reportMin, sectorIdx, prevRest);
+  document.getElementById('fdpTableWrap').innerHTML = renderFDPTable(acclim, table, tableNA, bucket712==='7.12.2'?actualReportMin:originalReportMin, sectorIdx, prevRest);
+
+  // ---- Step-by-step ----
+  const fSteps = [];
+  let fN = 1;
+  function fStep(title, formula, sub, result){
+    fSteps.push(
+      '<div style="margin-bottom:10px;padding:8px 10px;background:rgba(255,255,255,0.03);border-radius:8px;border-left:3px solid #6ab8ff;">' +
+        '<div style="font-weight:700;">Step ' + (fN++) + ' \u2014 ' + title + '</div>' +
+        '<div style="color:var(--muted);font-size:11px;margin:2px 0;">Formula/Rule: ' + formula + '</div>' +
+        (sub ? '<div style="color:var(--muted);font-size:11px;margin:2px 0;">Substituting: ' + sub + '</div>' : '') +
+        '<div style="font-weight:700;color:var(--green);">' + result + '</div>' +
+      '</div>'
+    );
+  }
+  fStep('Scheduled Report Time', 'Report = STD \u2212 offset', 'Report = ' + fmt(stdMin) + ' \u2212 ' + offsetH+'h'+offsetM.toString().padStart(2,'0')+'m', '= ' + fmt(originalReportMin));
+  if(delayMin>0){
+    fStep('Delay Classification (7.12)', 'Delay < 4h \u2192 7.12.1.1 | 4h\u201310h \u2192 7.12.1.2 | \u226510h \u2192 7.12.2', 'Delay = ' + delayHours + 'h ' + delayMinutesVal + 'm = ' + fmtDur(delayMin/60), delay712Text);
+  }
+  fStep('Table Lookup / Cap', bucket712==='7.12.1.2' ? 'Cap = min(table(scheduled), table(actual))' : 'Cap = table(report time, sectors, acclimatisation)', basisText, '= ' + fmtDur(cap));
+  fStep('FDP Start Time', bucket712==='7.12.1.2' ? 'Start = original report + 4h' : (bucket712==='7.12.1.1'||bucket712==='7.12.2' ? 'Start = actual report time' : 'Start = scheduled report time'), '', '= ' + fmt(fdpStartMin));
+  fStep('On-board Rest / Split Duty Extension (7.7)', extType==='none'?'No extension selected':(extType==='bunk'?'Extension = rest \u00d7 1/2 (bunk)':(extType==='seat'?'Extension = rest \u00d7 1/3 (seat)':'Extension = min(rest,10h) \u00d7 1/2 (split duty)')), extNote||'\u2014', '= ' + fmtDur(extendedFDP));
+  if(discEnabled){
+    fStep('Commander\'s Discretion Extension (7.15)', 'Max = 3h if single/last sector, 2h otherwise', discNoteText, '= ' + fmtDur(finalFDP));
+  }
+  fStep('Conclusion', 'Off-duty = FDP start + Final FDP', 'Off-duty = ' + fmt(fdpStartMin) + ' + ' + fmtDur(finalFDP), 'Final max FDP = ' + fmtDur(finalFDP) + ', off-duty at ' + fmt(offDuty));
+  const fStepsEl = document.getElementById('fdpSteps');
+  if(fStepsEl) fStepsEl.innerHTML = fSteps.join('');
 }
 
 // ================= LRV MODE (7.E) — no 7.6.2 tables at all =================
-function calcFDPLRV(){
+function calcFDPLRV(delayEnabled, delayMin, bucket712){
+  delayEnabled = delayEnabled || false; delayMin = delayMin || 0; bucket712 = bucket712 || 'none';
   const stdMin = toMin(document.getElementById('stdTime').value||"10:25");
   const memberType = document.querySelector('#memberTypeRow input:checked').value;
   const loc = document.querySelector('#locRow input:checked').value;
@@ -618,14 +777,15 @@ function calcFDPLRV(){
   const crc = document.getElementById('lrvCrc').value;
 
   const offsetMin = REPORT_OFFSETS.lrv[memberType][loc];
-  const reportMin = stdMin - offsetMin;
+  const originalReportMin = stdMin - offsetMin;
+  const actualReportMin = originalReportMin + delayMin;
   const offsetH=Math.floor(offsetMin/60), offsetM=offsetMin%60;
 
-  const baseFDP = segment==='S1' ? 18*60 : 20*60; // in minutes for precision, convert to hours below
+  const baseFDP = segment==='S1' ? 18*60 : 20*60;
   let maxFDPmin = baseFDP;
   let extendedAvailable = false, extReason = "";
   if(crew==='3'){
-    maxFDPmin = 18*60; // hard cap, no extension ever (7.E.7)
+    maxFDPmin = 18*60;
   } else {
     if(loc==='base' && delay>0 && delay<=240){ extendedAvailable = true; extReason = "Dubai departure, projected delay \u2264 4h — meets 7.E.7 extension trigger."; }
     else if(loc==='outstation'){ extendedAvailable = true; extReason = "Outstation departure — may apply 7.E.7 extension subject to rest-facility conditions."; }
@@ -633,15 +793,26 @@ function calcFDPLRV(){
   }
   const maxFDP = maxFDPmin/60;
   const baseFDPh = baseFDP/60;
-  const cabinFDP = baseFDPh + 5/60; // FC FDP + 5 min, ex-DXB only
+  const cabinFDP = baseFDPh + 5/60;
 
-  const offDuty = reportMin + maxFDPmin;
+  // 7.12 overlay: cap is segment-based only (unaffected by report-time bracket), so the
+  // "more restrictive of scheduled vs actual" comparison in 7.12.1.2 is a no-op for LRV —
+  // only the FDP start time shifts.
+  let fdpStartMin, delay712Text;
+  if(bucket712==='none'){ fdpStartMin = originalReportMin; delay712Text = 'No delay.'; }
+  else if(bucket712==='7.12.1.1'){ fdpStartMin = actualReportMin; delay712Text = 'Delay < 4h (7.12.1.1): cap unchanged; FDP starts at actual report time.'; }
+  else if(bucket712==='7.12.1.2'){ fdpStartMin = originalReportMin + 240; delay712Text = 'Delay 4h\u201310h (7.12.1.2): LRV cap is segment-based only (not time-of-day), so the cap is unaffected; FDP starts at original report + 4h.'; }
+  else { fdpStartMin = actualReportMin; delay712Text = 'Delay \u2265 10h (7.12.2): reclassified as rest; recompute fresh from actual report time.'; }
+
+  const offDuty = fdpStartMin + maxFDPmin;
 
   document.getElementById('fdpResult').innerHTML =
-    '<div class="result-row"><span class="k">Report time (STD - '+offsetH+'h'+offsetM.toString().padStart(2,'0')+'m)</span><span class="v blue">'+fmt(reportMin)+'</span></div>'+
+    '<div class="result-row"><span class="k">Scheduled report time (STD - '+offsetH+'h'+offsetM.toString().padStart(2,'0')+'m)</span><span class="v blue">'+fmt(originalReportMin)+'</span></div>'+
+    (delayMin>0 ? '<div class="result-row"><span class="k">Actual report time (after delay)</span><span class="v blue">'+fmt(actualReportMin)+'</span></div>' : '') +
     '<div class="result-row"><span class="k">Segment</span><span class="v '+(segment==='S1'?'green':'amber')+'">'+segment+'</span></div>'+
     '<div class="result-row"><span class="k">Base max FDP (no extension)</span><span class="v">'+fmtDur(baseFDPh)+'</span></div>'+
     '<div class="result-row"><span class="k">Cabin crew FDP cap (base+5min, ex-DXB only)</span><span class="v">'+fmtDur(cabinFDP)+'</span></div>'+
+    '<div class="result-row"><span class="k">FDP starts at</span><span class="v blue">'+fmt(fdpStartMin)+'</span></div>'+
     '<div class="result-row"><span class="k">Final max FDP</span><span class="v green">'+fmtDur(maxFDP)+'</span></div>'+
     '<div class="result-row"><span class="k">Latest off-duty time</span><span class="v blue">'+fmt(offDuty)+'</span></div>';
 
@@ -657,9 +828,33 @@ function calcFDPLRV(){
     warns += '<div class="warn-box amber">CRC unavailable: seat-blocking policy per OM-A 7.7.1.2 applies, and rest strategy must be reviewed (7.E.4).</div>';
   }
   document.getElementById('fdpWarnings').innerHTML = warns;
+
+  // ---- Step-by-step ----
+  const fSteps = [];
+  let fN = 1;
+  function fStep(title, formula, sub, result){
+    fSteps.push(
+      '<div style="margin-bottom:10px;padding:8px 10px;background:rgba(255,255,255,0.03);border-radius:8px;border-left:3px solid #ffc94a;">' +
+        '<div style="font-weight:700;">Step ' + (fN++) + ' \u2014 ' + title + '</div>' +
+        '<div style="color:var(--muted);font-size:11px;margin:2px 0;">Formula/Rule: ' + formula + '</div>' +
+        (sub ? '<div style="color:var(--muted);font-size:11px;margin:2px 0;">Substituting: ' + sub + '</div>' : '') +
+        '<div style="font-weight:700;color:var(--green);">' + result + '</div>' +
+      '</div>'
+    );
+  }
+  fStep('Scheduled Report Time', 'Report = STD \u2212 offset (LRV outstation offset differs from standard scheme)', 'Report = ' + fmt(stdMin) + ' \u2212 ' + offsetH+'h'+offsetM.toString().padStart(2,'0')+'m', '= ' + fmt(originalReportMin));
+  if(delayMin>0){
+    fStep('Delay Classification (7.12)', 'Delay < 4h \u2192 7.12.1.1 | 4h\u201310h \u2192 7.12.1.2 | \u226510h \u2192 7.12.2', 'Delay = ' + fmtDur(delayMin/60), delay712Text);
+  }
+  fStep('Base FDP Cap (7.E.5)', 'S1 \u2192 18h, S2 \u2192 20h (fixed, not table-based)', 'Segment = ' + segment, '= ' + fmtDur(baseFDPh));
+  fStep('Extension Eligibility (7.E.7)', '4-pilot crew: Dubai delay \u22644h, or outstation departure \u2192 up to 22h. 3-pilot: never.', crew==='3' ? 'Crew = 3-pilot' : ('Crew = 4-pilot, ' + (extendedAvailable ? extReason : 'conditions not met')), '= ' + fmtDur(maxFDP));
+  fStep('FDP Start Time', bucket712==='7.12.1.2' ? 'Start = original report + 4h' : (bucket712==='7.12.1.1'||bucket712==='7.12.2' ? 'Start = actual report time' : 'Start = scheduled report time'), '', '= ' + fmt(fdpStartMin));
+  fStep('Conclusion', 'Off-duty = FDP start + Final FDP', 'Off-duty = ' + fmt(fdpStartMin) + ' + ' + fmtDur(maxFDP), 'Final max FDP = ' + fmtDur(maxFDP) + ', off-duty at ' + fmt(offDuty));
+  const fStepsEl = document.getElementById('fdpSteps');
+  if(fStepsEl) fStepsEl.innerHTML = fSteps.join('');
 }
 
-['stdTime','sectors','prevRest','longestSector','extHours','lrvDelay'].forEach(id=>document.getElementById(id).addEventListener('input', calcFDP));
+['stdTime','sectors','prevRest','longestSector','extHours','lrvDelay','delayHours','delayMinutes','discHours'].forEach(id=>document.getElementById(id).addEventListener('input', calcFDP));
 document.querySelectorAll('#crewCountRow input,#acclimRow input,#memberTypeRow input,#locRow input,#extRow input,#ruleTypeRow input,#lrvSegmentRow input,#lrvCrewRow input').forEach(r=>r.addEventListener('change', calcFDP));
 document.getElementById('lrvCrc').addEventListener('change', calcFDP);
 
