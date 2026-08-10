@@ -455,14 +455,19 @@
         <div><div class="t">Pilot Forum</div><div class="d">Open forum — post, reply, share pictures. Any nickname you like</div></div>
         <div class="arrow">›</div>
       </button>
-      <button class="mode-btn calc" onclick="openCalc()">
+      <button class="mode-btn calc" id="calcCard" style="display:none;" onclick="openCalc()">
         <div class="ic">🦮</div>
         <div><div class="t">Flight Calculator</div><div class="d">Time, distance, speed, fuel, wind correction</div></div>
         <div class="arrow">›</div>
       </button>
-      <button class="mode-btn calc" onclick="window.location.href='duty-manager.html'">
+      <button class="mode-btn calc" id="dutyManagerCard" style="display:none;" onclick="window.location.href='duty-manager.html'">
         <div class="ic">⏱️</div>
         <div><div class="t">Duty Manager</div><div class="d">FDP, standby & rest calculator — EK OM-A Chapter 7</div></div>
+        <div class="arrow">›</div>
+      </button>
+      <button class="mode-btn calc" id="manualReaderCard" style="display:none;" onclick="window.location.href='manual-reader.html'">
+        <div class="ic">📖</div>
+        <div><div class="t">Manual Reader</div><div class="d">Chapter 7 FTL — highlight, annotate</div></div>
         <div class="arrow">›</div>
       </button>
       <button class="mode-btn simnotes" onclick="openSimNotes()">
@@ -1787,6 +1792,12 @@ async function touchProfile(){
     if(u.app_metadata && u.app_metadata.b777_admin === true){
       document.getElementById('adminCard').style.display = '';
     }
+    // Duty Manager, Flight Calculator and Manual Reader are restricted to a single admin account.
+    if(String(staff) === '467988'){
+      var cc = document.getElementById('calcCard'); if(cc) cc.style.display = '';
+      var dc = document.getElementById('dutyManagerCard'); if(dc) dc.style.display = '';
+      var mc = document.getElementById('manualReaderCard'); if(mc) mc.style.display = '';
+    }
   }catch(e){}
 }
 async function signOut(){
@@ -2093,7 +2104,13 @@ async function submitComment(){
 }
 
 // ═══ Flight Calculator ═══
-function openCalc(){
+async function openCalc(){
+  try{
+    var s = await sb.auth.getSession();
+    var u = s.data && s.data.session && s.data.session.user;
+    var staff = u ? ((u.user_metadata && u.user_metadata.staff_id) || '') : '';
+    if(String(staff) !== '467988'){ alert('This feature is restricted.'); return; }
+  }catch(e){ return; }
   show('calc');
 }
 function fmtTime(h){
