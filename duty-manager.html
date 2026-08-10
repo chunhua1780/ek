@@ -1238,27 +1238,48 @@ calcFDP(); calcStandby(); calcRest(); calcAcclim(); calcCumulative();
   var SB_URL = 'https://yogiadtnqqmivpekphme.supabase.co';
   var SB_KEY = 'sb_publishable_SSLhMPcjEbzcoIVFpjBWFA_-O3eOSUa';
   var ALLOWED_STAFF_ID = '467988';
+  var CACHE_KEY = 'gate_ok_467988';
   var sbGate = supabase.createClient(SB_URL, SB_KEY);
   (async function(){
     var gateEl = document.getElementById('accessGate');
     var contentEl = document.getElementById('pageContent');
+    function grant(){ gateEl.style.display = 'none'; contentEl.style.display = 'block'; }
+    function tryOfflineCache(){
+      if(localStorage.getItem(CACHE_KEY) === '1'){ grant(); return true; }
+      return false;
+    }
+    if(!navigator.onLine){
+      if(!tryOfflineCache()){
+        gateEl.innerHTML = '<div><h2 style="font-size:18px;">Offline</h2><p style="color:var(--muted);font-size:13px;">Connect to the internet once to verify access — after that this page works offline too.</p></div>';
+      }
+      return;
+    }
     try{
-      var u = await sbGate.auth.getUser();
-      if(!u.data || !u.data.user){
+      var s = await sbGate.auth.getSession();
+      if(!(s.data && s.data.session)){
         gateEl.innerHTML = '<div><h2 style="font-size:18px;">Please sign in</h2><p style="color:var(--muted);font-size:13px;">Sign in from the Home screen first, then reopen this page.</p></div>';
         return;
       }
-      var p = await sbGate.from('b777_profiles').select('staff_id').eq('user_id', u.data.user.id).single();
+      var uid = s.data.session.user.id;
+      var p = await sbGate.from('b777_profiles').select('staff_id').eq('user_id', uid).single();
       var staffId = p.data ? p.data.staff_id : null;
+      if(!staffId){
+        // Profile row may not exist yet (e.g. opened this link before ever visiting Home) —
+        // fall back to the same staff_id already carried in the session itself.
+        staffId = (s.data.session.user.user_metadata && s.data.session.user.user_metadata.staff_id) || null;
+      }
       if(String(staffId) !== ALLOWED_STAFF_ID){
+        localStorage.removeItem(CACHE_KEY);
         gateEl.innerHTML = '<div><h2 style="font-size:18px;">Access restricted</h2><p style="color:var(--muted);font-size:13px;">This page is only available to a specific admin account.</p></div>';
         return;
       }
-      gateEl.style.display = 'none';
-      contentEl.style.display = 'block';
+      localStorage.setItem(CACHE_KEY, '1');
+      grant();
     } catch(e){
       console.error(e);
-      gateEl.innerHTML = '<div><h2 style="font-size:18px;">Error checking access</h2><p style="color:var(--muted);font-size:13px;">Please try again later.</p></div>';
+      if(!tryOfflineCache()){
+        gateEl.innerHTML = '<div><h2 style="font-size:18px;">Error checking access</h2><p style="color:var(--muted);font-size:13px;">Please try again later.</p></div>';
+      }
     }
   })();
 })();

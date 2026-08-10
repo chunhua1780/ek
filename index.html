@@ -1773,8 +1773,18 @@ async function beat(){
     if(document.visibilityState!=='visible' || !navigator.onLine || !sb) return;
     var s = await sb.auth.getSession();
     if(!(s.data && s.data.session)) return;
+    var uid = s.data.session.user.id, me = deviceId();
+    // If a newer device logged in and evicted us, this row is gone — sign out here instead.
+    var check = await sb.from('b777_devices').select('device_id').eq('user_id', uid);
+    var rows = check.data || [];
+    if(rows.length > 0 && !rows.some(function(x){ return x.device_id === me; })){
+      try{ await sb.auth.signOut(); }catch(e){}
+      alert('You\'ve been signed out because this account was signed in on a new device.');
+      location.reload();
+      return;
+    }
     await sb.rpc('b777_heartbeat');
-    await sb.from('b777_devices').upsert({ user_id: s.data.session.user.id, device_id: deviceId(), last_seen: new Date().toISOString() });
+    await sb.from('b777_devices').upsert({ user_id: uid, device_id: me, last_seen: new Date().toISOString() });
   }catch(e){}
 }
 function startHeartbeat(){
@@ -1788,7 +1798,11 @@ async function touchProfile(){
     if(!(s.data && s.data.session)) return;
     var u = s.data.session.user;
     var staff = (u.user_metadata && u.user_metadata.staff_id) || '';
-    await sb.from('b777_profiles').upsert({ user_id: u.id, staff_id: staff, email: u.email || '', last_seen: new Date().toISOString() }, { ignoreDuplicates: false });
+    if(navigator.onLine){
+      try{
+        await sb.from('b777_profiles').upsert({ user_id: u.id, staff_id: staff, email: u.email || '', last_seen: new Date().toISOString() }, { ignoreDuplicates: false });
+      }catch(netErr){ console.error('profile upsert failed, continuing anyway', netErr); }
+    }
     if(u.app_metadata && u.app_metadata.b777_admin === true){
       document.getElementById('adminCard').style.display = '';
     }
@@ -1936,11 +1950,13 @@ async function enforceDeviceLimit(){
     var rows = r.data || [];
     var known = rows.some(function(x){ return x.device_id === me; });
     if(!known && rows.length >= 2){
-      if(confirm('Device limit: this account is already signed in on 2 devices.\n\nOK = sign the other devices out and use this one.\nCancel = stay signed out here.')){
-        try{ await sb.auth.signOut({ scope: 'others' }); }catch(e){}
-        try{ await sb.from('b777_devices').delete().eq('user_id', uid).neq('device_id', me); }catch(e){}
-      } else {
-        await sb.auth.signOut(); location.reload(); return false;
+      // Always keep the newest logged-in device(s); silently evict the oldest so this new
+      // device can take a slot. No confirmation prompt here — the evicted device finds out
+      // on its own next heartbeat instead.
+      var keepMostRecent = rows.slice(0, 1); // keep only the single most-recently-seen existing device
+      var toEvict = rows.slice(1);
+      for(var i=0;i<toEvict.length;i++){
+        try{ await sb.from('b777_devices').delete().eq('user_id', uid).eq('device_id', toEvict[i].device_id); }catch(e){}
       }
     }
     await sb.from('b777_devices').upsert({

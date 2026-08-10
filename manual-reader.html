@@ -27,13 +27,13 @@
   main{flex:1; padding:20px 24px; max-width:820px;}
   main h2{font-size:19px; margin:0 0 4px;}
   main .secid{font-family:var(--mono); color:var(--green); font-size:12px; letter-spacing:.05em;}
-  .para{position:relative; padding:10px 12px; border-radius:8px; margin-bottom:8px; line-height:1.65; font-size:14.5px; transition:background .15s;}
+  .para{position:relative; padding:10px 12px; border-radius:8px; margin-bottom:8px; line-height:var(--reader-line-height, 1.65); font-size:var(--reader-font-size, 14.5px); transition:background .15s;}
   .para:hover .toolbar{opacity:1;}
   .toolbar{position:absolute; top:-14px; right:8px; display:flex; gap:4px; opacity:0; transition:opacity .15s; background:var(--panel-2); border:1px solid var(--line-bright); border-radius:20px; padding:3px 6px;}
   .toolbar button{width:16px; height:16px; border-radius:50%; border:1px solid rgba(255,255,255,0.2); cursor:pointer; padding:0;}
   .toolbar button.note-btn{width:auto; height:auto; border-radius:6px; border:none; background:transparent; color:var(--muted); font-size:11px; padding:0 4px;}
   .toolbar button.clear-btn{width:auto; height:auto; border-radius:6px; border:none; background:transparent; color:var(--muted); font-size:11px; padding:0 4px;}
-  .hl-yellow{background:rgba(255,224,102,0.16);} .hl-green{background:rgba(92,255,177,0.14);} .hl-blue{background:rgba(106,184,255,0.14);} .hl-pink{background:rgba(255,133,193,0.14);}
+  .hl-yellow{background:rgba(255,224,102,0.16);} .hl-green{background:rgba(92,255,177,0.14);} .hl-blue{background:rgba(106,184,255,0.14);} .hl-pink{background:rgba(255,133,193,0.14);} .hl-orange{background:rgba(255,163,92,0.16);} .hl-purple{background:rgba(196,139,255,0.15);}
   .note-box{margin-top:6px; padding:8px 10px; background:var(--panel-2); border-left:3px solid var(--amber); border-radius:6px; font-size:12.5px; color:var(--amber); display:none;}
   .note-box.show{display:block;}
   .note-box textarea{width:100%; background:transparent; border:none; color:var(--amber); font-family:var(--sans); font-size:12.5px; resize:vertical; min-height:40px;}
@@ -48,6 +48,7 @@
     <a href="./index.html">&lsaquo; Back to Home</a>
     <h1>Manual Reader — Chapter 7 FTL</h1>
     <div style="display:flex; gap:6px; align-items:center;">
+      <button id="prefsBtn" style="background:var(--panel-2); border:1px solid var(--line-bright); color:var(--muted); font-size:11px; padding:5px 10px; border-radius:6px; cursor:pointer;">Aa</button>
       <button id="bookmarksBtn" style="background:var(--panel-2); border:1px solid var(--line-bright); color:var(--muted); font-size:11px; padding:5px 10px; border-radius:6px; cursor:pointer;">★ Bookmarks</button>
       <button id="langToggle" style="background:var(--panel-2); border:1px solid var(--line-bright); color:var(--green); font-size:11px; font-weight:700; padding:5px 10px; border-radius:6px; cursor:pointer;">中文</button>
     </div>
@@ -56,6 +57,8 @@
   <div id="gate" class="gate">
     <div><h2>Checking access…</h2><p>This page is restricted.</p></div>
   </div>
+
+  <div id="prefsPanel" style="display:none; position:fixed; top:50px; right:16px; width:260px; background:var(--panel); border:1px solid var(--line-bright); border-radius:10px; padding:14px; z-index:50; box-shadow:0 10px 30px rgba(0,0,0,0.5);"></div>
 
   <div id="bookmarksPanel" style="display:none; position:fixed; top:50px; right:16px; width:280px; max-height:60vh; overflow-y:auto; background:var(--panel); border:1px solid var(--line-bright); border-radius:10px; padding:12px; z-index:50; box-shadow:0 10px 30px rgba(0,0,0,0.5);">
     <div style="font-size:12px; font-weight:700; color:var(--green); margin-bottom:8px;">★ Bookmarked paragraphs</div>
@@ -77,173 +80,177 @@ var sb = supabase.createClient(SB_URL, SB_KEY);
 // ================= CONTENT (Chapter 7 — English) =================
 var SECTIONS = [
   { id:'7.1-7.4', title:'Introduction & General Principles', title_zh:'引言与总则', paragraphs:[
-    { en:'Purpose: this chapter describes the Emirates Flight Time Limitations (FTL) scheme. Aviation regulations require that a crew member must not fly, and the operator must not require them to fly, if there is reason to believe they are suffering or are likely to suffer from a level of fatigue that could endanger the aircraft or its occupants.', zh:'本章的目的是为机组人员提供阿联酋航空飞行时间限制方案（FTL）的描述。民航法规要求，如果机组成员或运营人有理由相信该机组成员正在遭受或可能在飞行中遭受可能危及飞机或其乘员安全的疲劳水平，则该机组成员不得飞行，运营人也不得要求其飞行。' },
-    { en:'The FTL scheme exists to ensure crew members begin each Flight Duty Period (FDP) adequately rested, and remain sufficiently free from fatigue throughout the flight to operate to a satisfactory level of efficiency and safety in both normal and abnormal conditions.', zh:'本飞行和执勤时间限制方案的目的是确保机组成员在每个飞行执勤期（FDP）开始时得到充分休息，并且在飞行中充分远离疲劳，以便能够在所有正常和异常情况下以满意的效率和安全水平运行。' },
-    { en:'Fatigue Risk Management (FRM) is described in detail in FOPM Appendix C.', zh:'疲劳风险管理（FRM）为改善我们运行的安全性和效率以及最大化员工的福祉提供了重要机会，详细描述记录在FOPM附录C中。' },
-    { en:'Rostering must allow flights to be completed within the maximum permitted FDP, considering pre-flight duties, taxi, flight time and turnaround time. Unforeseen delays are recognised; the commander may extend the FDP under prescribed conditions.', zh:'计划排班应允许在最大允许飞行执勤期内完成航班。GCAA在评估排班适用性时，会考虑飞行前职责、滑行、飞行本身和turnaround时间所允许的时间。但公认的是，有时计划航班会遇到不可预见的延误，此时机长可以在规定条件下延长FDP。' },
-    { en:'Other planning factors: avoid poor practices such as day/night duty alternation; position crew in a way that avoids severely disrupting established sleep/work patterns; avoid rest periods of 18–30 hours, especially after long-haul time-zone-crossing flights; plan and notify leave in advance.', zh:'计划执勤期时还需要考虑：分配工作模式以避免日夜班交替等不良做法；定位机组人员以避免严重破坏已建立的睡眠/工作模式；避免安排18至30小时的休息期，特别是在长途跨时区飞行后；提前计划休假并通知机组人员。' },
-    { en:'Responsibilities: Emirates must prepare rosters with sufficient advance notice, establish minimum notice periods, train rostering staff on circadian disruption and sleep deprivation, and provide suitable accommodation outside base. Rosters are notified at least 5 days before the start of the calendar month.', zh:'公司责任：提前足够时间准备执勤排班，为机组人员提供计划充分的飞行前休息机会。排班人员需接受关于昼夜节律干扰和睡眠剥夺影响的培训。在基地外必须提供合适住宿。计划排班应在日历月开始前至少5天以月度形式通知机组人员。' },
-    { en:'Crew members share responsibility: they must make full use of rest opportunities and facilities provided, and properly plan and use rest periods to minimise fatigue. A crew member must not act if they know or suspect they are unfit, and must not fly if they know they would be in breach of this scheme.', zh:'机组责任：飞行和执勤时间的适当控制责任不能完全由公司承担，机组人员有责任充分利用提供的休息机会和设施，正确规划和使用休息期以尽量减少疲劳。如果机组人员知道或怀疑自己不适合运行，则不得作为运行机组人员行事；如果知道会违反本方案，则不得飞行。' }
+    { key:'p1', en:'Purpose: this chapter describes the Emirates Flight Time Limitations (FTL) scheme. Aviation regulations require that a crew member must not fly, and the operator must not require them to fly, if there is reason to believe they are suffering or are likely to suffer from a level of fatigue that could endanger the aircraft or its occupants.', zh:'本章的目的是为机组人员提供阿联酋航空飞行时间限制方案（FTL）的描述。民航法规要求，如果机组成员或运营人有理由相信该机组成员正在遭受或可能在飞行中遭受可能危及飞机或其乘员安全的疲劳水平，则该机组成员不得飞行，运营人也不得要求其飞行。' },
+    { key:'p2', en:'The FTL scheme exists to ensure crew members begin each Flight Duty Period (FDP) adequately rested, and remain sufficiently free from fatigue throughout the flight to operate to a satisfactory level of efficiency and safety in both normal and abnormal conditions.', zh:'本飞行和执勤时间限制方案的目的是确保机组成员在每个飞行执勤期（FDP）开始时得到充分休息，并且在飞行中充分远离疲劳，以便能够在所有正常和异常情况下以满意的效率和安全水平运行。' },
+    { key:'p3', en:'Fatigue Risk Management (FRM) is described in detail in FOPM Appendix C.', zh:'疲劳风险管理（FRM）为改善我们运行的安全性和效率以及最大化员工的福祉提供了重要机会，详细描述记录在FOPM附录C中。' },
+    { key:'p4', en:'Rostering must allow flights to be completed within the maximum permitted FDP, considering pre-flight duties, taxi, flight time and turnaround time. Unforeseen delays are recognised; the commander may extend the FDP under prescribed conditions.', zh:'计划排班应允许在最大允许飞行执勤期内完成航班。GCAA在评估排班适用性时，会考虑飞行前职责、滑行、飞行本身和turnaround时间所允许的时间。但公认的是，有时计划航班会遇到不可预见的延误，此时机长可以在规定条件下延长FDP。' },
+    { key:'p5', en:'Other planning factors: avoid poor practices such as day/night duty alternation; position crew in a way that avoids severely disrupting established sleep/work patterns; avoid rest periods of 18–30 hours, especially after long-haul time-zone-crossing flights; plan and notify leave in advance.', zh:'计划执勤期时还需要考虑：分配工作模式以避免日夜班交替等不良做法；定位机组人员以避免严重破坏已建立的睡眠/工作模式；避免安排18至30小时的休息期，特别是在长途跨时区飞行后；提前计划休假并通知机组人员。' },
+    { key:'p6', en:'Responsibilities: Emirates must prepare rosters with sufficient advance notice, establish minimum notice periods, train rostering staff on circadian disruption and sleep deprivation, and provide suitable accommodation outside base. Rosters are notified at least 5 days before the start of the calendar month.', zh:'公司责任：提前足够时间准备执勤排班，为机组人员提供计划充分的飞行前休息机会。排班人员需接受关于昼夜节律干扰和睡眠剥夺影响的培训。在基地外必须提供合适住宿。计划排班应在日历月开始前至少5天以月度形式通知机组人员。' },
+    { key:'p7', en:'Crew members share responsibility: they must make full use of rest opportunities and facilities provided, and properly plan and use rest periods to minimise fatigue. A crew member must not act if they know or suspect they are unfit, and must not fly if they know they would be in breach of this scheme.', zh:'机组责任：飞行和执勤时间的适当控制责任不能完全由公司承担，机组人员有责任充分利用提供的休息机会和设施，正确规划和使用休息期以尽量减少疲劳。如果机组人员知道或怀疑自己不适合运行，则不得作为运行机组人员行事；如果知道会违反本方案，则不得飞行。' }
   ]},
   { id:'7.5', title:'Definitions', title_zh:'定义', paragraphs:[
-    { en:'Acclimatised: a crew member is acclimatised when they have spent 3 consecutive local nights on the ground within a 2-hour-wide time zone, with the opportunity for uninterrupted night sleep. They remain acclimatised until completing a duty period at a place whose local time differs from the departure point by more than 2 hours.', zh:'适应当地时间（Acclimatised）：当机组人员在2小时宽的时区内连续在地面上度过3个当地夜晚，并且能够进行不间断的夜间睡眠时，即为适应。此后机组人员将保持适应状态，直到在出发地当地时间相差超过2小时的地点完成执勤期为止。' },
-    { en:'Augmented Flight Crew: a flight crew comprising more than the minimum number required to operate the aircraft, allowing each member to leave their station and be replaced for in-flight rest.', zh:'增补飞行机组（Augmented Flight Crew）：由超过操作飞机所需最低人数的飞行机组组成，每个成员可以离开其指定岗位，由另一名具资格的成员替换，以便进行机上休息。' },
-    { en:'Contactable: a period during the day (not a day off) when the crew member must be reachable at an agreed location so they can be told of a duty starting no less than 10 hours later. Typically 1500–1700 local.', zh:'可联系期（Contactable）：除休息日外，白天的一小段时间，在此期间公司要求机组人员在约定地点，以便通知执勤期，该执勤期将在不少于10小时后开始，通常在当地时间1500至1700之间。' },
-    { en:'Day Off: a period completely free of all duties. A single day off must include 2 local nights (minimum 34 hours). Consecutive days off add one further local night per additional day.', zh:'休息日（Day Off）：完全没有任何职责的时期。单日休息日应包括2个当地夜晚（最少34小时）。连续休息日应为每个额外的连续休息日再包括一个当地夜晚。' },
-    { en:'Duty Period: from when a crew member is required to report or begins duty, until they are completely free of all duties.', zh:'执勤期（Duty Period）：从飞行或客舱机组人员被要求报到或开始执勤时开始，到该人完全脱离所有职责时结束的时期。' },
-    { en:'Early Start: duty beginning 0500–0659 local.', zh:'早班（Early Start Duty）：如果执勤在0500-0659当地时间开始，则为早班。' },
-    { en:'Fatigue: a physiological state of reduced mental or physical performance from sleep loss, extended wakefulness, circadian phase, or workload, which can impair alertness and the ability to safely operate.', zh:'疲劳（Fatigue）：由于睡眠不足或延长清醒时间、昼夜节律阶段或工作负荷导致的身体表现能力下降的生理状态，可能损害机组人员的警觉性和安全操作能力。' },
-    { en:'FDP (Flight Duty Period): from when a crew member is required to report for duty involving a flight or series of flights, until the aircraft finally comes to rest at the end of the last such flight.', zh:'飞行执勤期（Flight Duty Period, FDP）：从机组成员被要求报到执行包括一个航班或一系列航班的职责时开始，到飞机在他是机组成员的上一个航班结束时最终停止时结束的时期。' },
-    { en:'Flight Time / Block Hours: from the aircraft first moving under its own power for take-off, to the moment it comes to rest at the end of the flight.', zh:'飞行时间/轮挡小时（Flight Time/Block Hours）：从飞机为起飞目的首次移动的时刻到其在飞行结束时停止的时刻的总时间。' },
-    { en:'Late Finish: duty starting before 0059 and ending 0100–0159 local.', zh:'晚收工（Late Finish）：如果执勤在0059前开始并在0100-0159当地时间结束，则为晚收工执勤。' },
-    { en:'Local Night: the 8-hour period between 2200 and 0800 local time.', zh:'当地夜晚（Local Night）：当地时间2200小时至0800小时之间的8小时时段。' },
-    { en:'LRV (Long Range Variation): augmented long-range operations covering specific city pairs, with a planned flight time exceeding 14 hours (considering average winds and seasonal variation).', zh:'远程航线变更（Long Range Variation, LRV）：增补远程运行，涉及特定城市对之间的任何航段，计划飞行时间超过14小时（考虑平均风况和季节性变化）。' },
-    { en:'Night Duty: any duty with any part falling within 0200–0459 local.', zh:'夜间执勤（Night Duty）：如果执勤的任何部分在0200-0459期间，则为夜间执勤。' },
-    { en:'Pilot-In-Command: the pilot responsible for and in charge of the safe conduct of the flight.', zh:'机长（Pilot-In-Command）：就飞机而言，指在当时负责飞机驾驶而不受飞机上任何其他飞行员指导的人。' },
-    { en:'Positioning: transferring a crew member as a passenger, by surface or air, at the operator\'s request.', zh:'定位（Positioning）：应公司要求，以乘客身份在地面或空中运输中转移机组人员的做法。' },
-    { en:'Reporting Time: the time a crew member is required to report for any duty.', zh:'报到时间（Reporting Time）：要求机组人员报到执行任何职责的时间。' },
-    { en:'Rest Period: a continuous, defined period before and/or after duty during which a crew member is completely free of all duties.', zh:'休息期（Rest Period）：在职责之前和/或之后的连续和明确的时段，在此期间飞行或客舱机组人员完全脱离所有职责。' },
-    { en:'Sector: from the aircraft first moving under its own power to the moment it stops at the parking position after the next landing.', zh:'航段（Sector）：从飞机在其自身动力下首次移动到其在下一次着陆后在指定停车位置停止的时间。' },
-    { en:'Split Duty: an FDP made up of two or more sectors separated by a period shorter than the minimum rest period.', zh:'分段执勤（Split Duty）：由两个或多个航段组成的飞行执勤期，由小于最小休息期的时间隔开。' },
-    { en:'Standby Duty: a period during which the operator restricts a crew member who would otherwise be off duty — excluding Contactable time for a duty starting no less than 10 hours later.', zh:'待命（Standby duty）：公司对本来会休息的机组人员施加限制的时期，但不包括要求机组人员保持可联系以通知职责、且该职责计划在10小时或更晚开始的时间。' },
-    { en:'Suitable Accommodation: a fully-equipped bedroom, minimal noise, well ventilated, with light and temperature control.', zh:'合适住宿（Suitable Accommodation）：设施齐全的卧室，噪音最小，通风良好，并具有控制光线和温度的功能。' },
-    { en:'Week: the 7 consecutive days from Sunday to Saturday.', zh:'周（Week）：从周日开始到周六结束的连续7天。' }
+    { key:'p1', en:'Acclimatised: a crew member is acclimatised when they have spent 3 consecutive local nights on the ground within a 2-hour-wide time zone, with the opportunity for uninterrupted night sleep. They remain acclimatised until completing a duty period at a place whose local time differs from the departure point by more than 2 hours.', zh:'适应当地时间（Acclimatised）：当机组人员在2小时宽的时区内连续在地面上度过3个当地夜晚，并且能够进行不间断的夜间睡眠时，即为适应。此后机组人员将保持适应状态，直到在出发地当地时间相差超过2小时的地点完成执勤期为止。' },
+    { key:'p2', en:'Augmented Flight Crew: a flight crew comprising more than the minimum number required to operate the aircraft, allowing each member to leave their station and be replaced for in-flight rest.', zh:'增补飞行机组（Augmented Flight Crew）：由超过操作飞机所需最低人数的飞行机组组成，每个成员可以离开其指定岗位，由另一名具资格的成员替换，以便进行机上休息。' },
+    { key:'p3', en:'Contactable: a period during the day (not a day off) when the crew member must be reachable at an agreed location so they can be told of a duty starting no less than 10 hours later. Typically 1500–1700 local.', zh:'可联系期（Contactable）：除休息日外，白天的一小段时间，在此期间公司要求机组人员在约定地点，以便通知执勤期，该执勤期将在不少于10小时后开始，通常在当地时间1500至1700之间。' },
+    { key:'p4', en:'Day Off: a period completely free of all duties. A single day off must include 2 local nights (minimum 34 hours). Consecutive days off add one further local night per additional day.', zh:'休息日（Day Off）：完全没有任何职责的时期。单日休息日应包括2个当地夜晚（最少34小时）。连续休息日应为每个额外的连续休息日再包括一个当地夜晚。' },
+    { key:'p5', en:'Duty Period: from when a crew member is required to report or begins duty, until they are completely free of all duties.', zh:'执勤期（Duty Period）：从飞行或客舱机组人员被要求报到或开始执勤时开始，到该人完全脱离所有职责时结束的时期。' },
+    { key:'p6', en:'Early Start: duty beginning 0500–0659 local.', zh:'早班（Early Start Duty）：如果执勤在0500-0659当地时间开始，则为早班。' },
+    { key:'p7', en:'Fatigue: a physiological state of reduced mental or physical performance from sleep loss, extended wakefulness, circadian phase, or workload, which can impair alertness and the ability to safely operate.', zh:'疲劳（Fatigue）：由于睡眠不足或延长清醒时间、昼夜节律阶段或工作负荷导致的身体表现能力下降的生理状态，可能损害机组人员的警觉性和安全操作能力。' },
+    { key:'p8', en:'FDP (Flight Duty Period): from when a crew member is required to report for duty involving a flight or series of flights, until the aircraft finally comes to rest at the end of the last such flight.', zh:'飞行执勤期（Flight Duty Period, FDP）：从机组成员被要求报到执行包括一个航班或一系列航班的职责时开始，到飞机在他是机组成员的上一个航班结束时最终停止时结束的时期。' },
+    { key:'p9', en:'Flight Time / Block Hours: from the aircraft first moving under its own power for take-off, to the moment it comes to rest at the end of the flight.', zh:'飞行时间/轮挡小时（Flight Time/Block Hours）：从飞机为起飞目的首次移动的时刻到其在飞行结束时停止的时刻的总时间。' },
+    { key:'p10', en:'Late Finish: duty starting before 0059 and ending 0100–0159 local.', zh:'晚收工（Late Finish）：如果执勤在0059前开始并在0100-0159当地时间结束，则为晚收工执勤。' },
+    { key:'p11', en:'Local Night: the 8-hour period between 2200 and 0800 local time.', zh:'当地夜晚（Local Night）：当地时间2200小时至0800小时之间的8小时时段。' },
+    { key:'p12', en:'LRV (Long Range Variation): augmented long-range operations covering specific city pairs, with a planned flight time exceeding 14 hours (considering average winds and seasonal variation).', zh:'远程航线变更（Long Range Variation, LRV）：增补远程运行，涉及特定城市对之间的任何航段，计划飞行时间超过14小时（考虑平均风况和季节性变化）。' },
+    { key:'p13', en:'Night Duty: any duty with any part falling within 0200–0459 local.', zh:'夜间执勤（Night Duty）：如果执勤的任何部分在0200-0459期间，则为夜间执勤。' },
+    { key:'p14', en:'Pilot-In-Command: the pilot responsible for and in charge of the safe conduct of the flight.', zh:'机长（Pilot-In-Command）：就飞机而言，指在当时负责飞机驾驶而不受飞机上任何其他飞行员指导的人。' },
+    { key:'p15', en:'Positioning: transferring a crew member as a passenger, by surface or air, at the operator\'s request.', zh:'定位（Positioning）：应公司要求，以乘客身份在地面或空中运输中转移机组人员的做法。' },
+    { key:'p16', en:'Reporting Time: the time a crew member is required to report for any duty.', zh:'报到时间（Reporting Time）：要求机组人员报到执行任何职责的时间。' },
+    { key:'p17', en:'Rest Period: a continuous, defined period before and/or after duty during which a crew member is completely free of all duties.', zh:'休息期（Rest Period）：在职责之前和/或之后的连续和明确的时段，在此期间飞行或客舱机组人员完全脱离所有职责。' },
+    { key:'p18', en:'Sector: from the aircraft first moving under its own power to the moment it stops at the parking position after the next landing.', zh:'航段（Sector）：从飞机在其自身动力下首次移动到其在下一次着陆后在指定停车位置停止的时间。' },
+    { key:'p19', en:'Split Duty: an FDP made up of two or more sectors separated by a period shorter than the minimum rest period.', zh:'分段执勤（Split Duty）：由两个或多个航段组成的飞行执勤期，由小于最小休息期的时间隔开。' },
+    { key:'p20', en:'Standby Duty: a period during which the operator restricts a crew member who would otherwise be off duty — excluding Contactable time for a duty starting no less than 10 hours later.', zh:'待命（Standby duty）：公司对本来会休息的机组人员施加限制的时期，但不包括要求机组人员保持可联系以通知职责、且该职责计划在10小时或更晚开始的时间。' },
+    { key:'p21', en:'Suitable Accommodation: a fully-equipped bedroom, minimal noise, well ventilated, with light and temperature control.', zh:'合适住宿（Suitable Accommodation）：设施齐全的卧室，噪音最小，通风良好，并具有控制光线和温度的功能。' },
+    { key:'p22', en:'Week: the 7 consecutive days from Sunday to Saturday.', zh:'周（Week）：从周日开始到周六结束的连续7天。' }
   ]},
   { id:'7.6', title:'FDP Calculation — Flight Crew', title_zh:'飞行执勤期计算——飞行机组', paragraphs:[
-    { en:'The maximum FDP for flight crew is determined from tables 7.6.2.1 (acclimatised) or 7.6.2.2 (not acclimatised), as applicable. Values may be extended using in-flight rest, split duty or commander\'s discretion under 7.7.1, 7.7.2 and 7.15.', zh:'飞行机组的最大飞行执勤期（FDP）应根据7.6.2.1或7.6.2.2（如适用）确定。从表中提取的时间可通过使用机上休息、分段执勤和机长酌情权在7.7.1、7.7.2和7.15条款下延长。' },
-    { en:'When the flight crew comprises only two pilots, any FDP with a planned sector exceeding 7 hours must be calculated per 7.9.3 (sector folding).', zh:'当飞机飞行机组仅由两名飞行员组成时，任何计划航段超过7小时的FDP必须根据7.9.3的规定计算（航段折算）。' },
-    { en:'Reporting time — flight crew: base 1h25m before STD; outstation 1h05m before STD. Non-standard reporting times may not be used to gain a longer FDP from a more favourable time band. Only pre-flight duties count toward FDP; post-flight activity allows a minimum of 30 minutes.', zh:'飞行机组的报告时间：迪拜基地飞行机组STD前1小时25分钟；外站飞行机组STD前1小时05分钟。不允许使用非标准报告时间以利用更有利时间带的更长最大FDP。只有飞行前职责是FDP的一部分，飞行后活动将允许最少30分钟的职责。' },
-    { en:'Table 7.6.2.1 (2+ pilots, acclimatised) — maximum FDP (hours) by report-time band and sector count: 0600–0759: 13/12.25/11.5/10.75/10/9.5/9/9 (1–8+ sectors). 0800–1259: 14/13.25/12.5/11.75/11/10.5/10/9.5. 1300–1759: 13/12.25/11.5/10.75/10/9.5/9/9. 1800–2159: 12/11.25/10.5/9.75/9/9/9/9. 2200–0559: 11/10.25/9.5/9/9/9/9/9.', zh:'两名或以上飞行机组－适应当地时间表：当地时间开始0600-0759：1段13、2段12¼、3段11½、4段10¾、5段10、6段9½、7段9、8段以上9小时。0800-1259：14、13¼、12½、11¾、11、10½、10、9½。1300-1759：13、12¼、11½、10¾、10、9½、9、9。1800-2159：12、11¼、10½、9¾、9、9、9、9。2200-0559：11、10¼、9½、9、9、9、9、9。' },
-    { en:'Table 7.6.2.2 (2+ pilots, not acclimatised) — by preceding rest length and sector count: ≤18h or >30h: 13/12.25/11.5/10.75/10/9.25/9 (1–7+ sectors). 18–30h: 11.5/11/10.5/9.75/9/9/9. A short sector must not be inserted into an 18–30h rest to artificially produce a rest below 18h in order to gain a longer FDP.', zh:'两名或以上飞行机组－未适应当地时间表：前一休息期长度最多18小时或超过30小时：1段13、2段12¼、3段11½、4段10¾、5段10、6段9¼、7段以上9小时。18至30小时之间：11½、11、10½、9¾、9、9、9。不允许在18至30小时的休息期内插入短班，以产生少于18小时的休息期，从而利用更长的可用FDP。' }
+    { key:'p1', en:'The maximum FDP for flight crew is determined from tables 7.6.2.1 (acclimatised) or 7.6.2.2 (not acclimatised), as applicable. Values may be extended using in-flight rest, split duty or commander\'s discretion under 7.7.1, 7.7.2 and 7.15.', zh:'飞行机组的最大飞行执勤期（FDP）应根据7.6.2.1或7.6.2.2（如适用）确定。从表中提取的时间可通过使用机上休息、分段执勤和机长酌情权在7.7.1、7.7.2和7.15条款下延长。' },
+    { key:'p2', en:'When the flight crew comprises only two pilots, any FDP with a planned sector exceeding 7 hours must be calculated per 7.9.3 (sector folding).', zh:'当飞机飞行机组仅由两名飞行员组成时，任何计划航段超过7小时的FDP必须根据7.9.3的规定计算（航段折算）。' },
+    { key:'p3', en:'Reporting time — flight crew: base 1h25m before STD; outstation 1h05m before STD. Non-standard reporting times may not be used to gain a longer FDP from a more favourable time band. Only pre-flight duties count toward FDP; post-flight activity allows a minimum of 30 minutes.', zh:'飞行机组的报告时间：迪拜基地飞行机组STD前1小时25分钟；外站飞行机组STD前1小时05分钟。不允许使用非标准报告时间以利用更有利时间带的更长最大FDP。只有飞行前职责是FDP的一部分，飞行后活动将允许最少30分钟的职责。' },
+    { key:'p4', en:'Table 7.6.2.1 (2+ pilots, acclimatised) — maximum FDP (hours) by report-time band and sector count: 0600–0759: 13/12.25/11.5/10.75/10/9.5/9/9 (1–8+ sectors). 0800–1259: 14/13.25/12.5/11.75/11/10.5/10/9.5. 1300–1759: 13/12.25/11.5/10.75/10/9.5/9/9. 1800–2159: 12/11.25/10.5/9.75/9/9/9/9. 2200–0559: 11/10.25/9.5/9/9/9/9/9.', zh:'两名或以上飞行机组－适应当地时间表：当地时间开始0600-0759：1段13、2段12¼、3段11½、4段10¾、5段10、6段9½、7段9、8段以上9小时。0800-1259：14、13¼、12½、11¾、11、10½、10、9½。1300-1759：13、12¼、11½、10¾、10、9½、9、9。1800-2159：12、11¼、10½、9¾、9、9、9、9。2200-0559：11、10¼、9½、9、9、9、9、9。' },
+    { key:'p5', en:'Table 7.6.2.2 (2+ pilots, not acclimatised) — by preceding rest length and sector count: ≤18h or >30h: 13/12.25/11.5/10.75/10/9.25/9 (1–7+ sectors). 18–30h: 11.5/11/10.5/9.75/9/9/9. A short sector must not be inserted into an 18–30h rest to artificially produce a rest below 18h in order to gain a longer FDP.', zh:'两名或以上飞行机组－未适应当地时间表：前一休息期长度最多18小时或超过30小时：1段13、2段12¼、3段11½、4段10¾、5段10、6段9¼、7段以上9小时。18至30小时之间：11½、11、10½、9¾、9、9、9。不允许在18至30小时的休息期内插入短班，以产生少于18小时的休息期，从而利用更长的可用FDP。' }
   ]},
   { id:'7.7', title:'FDP Extension — On-Board Rest & Split Duty', title_zh:'飞行执勤期的延长——机上休息与分段执勤', paragraphs:[
-    { en:'On-board rest (7.7.1): with additional crew for in-flight rest, rest should be shared evenly; the commander decides the order unless a specific rest strategy is used. Resting crew need a reclining seat, or a crew rest compartment (CRC) or equivalent lie-flat first/business seating, separated from passengers.', zh:'当携带额外机组成员提供机上休息以延长FDP时，如果情况允许，休息应在机组成员之间平均分配，顺序由机长决定，除非有特定的休息策略可用。休息的机组成员必须提供带有扶手的舒适斜倚座椅，或配备卧铺或等效平躺头等舱或商务舱座位的机组休息室，与任何乘客至少隔一个侧座并与驾驶舱隔开。' },
-    { en:'CRC priority: LRV operations — CRC then first-class seat/suite. Non-LRV operations — CRC, then first-class seat/suite, then business-class seat. Cabin crew use CRC if available, otherwise the LRV/non-LRV rules apply as relevant.', zh:'对于飞行机组，机上休息应按以下优先级计划——LRV运行：1.CRC 2.头等舱座位/套房。非LRV运行：1.CRC 2.头等舱座位/套房 3.商务舱座位。客舱机组应使用CRC（如可用），如CRC不可用，参考LRV运行或非LRV运行的相应规定。' },
-    { en:'Augmented crew rest strategy (3 pilots): 1st rest — augmenting pilot; 2nd — operating pilot 1; 3rd — operating pilot 2. (4 pilots): 1st rest — augmenting pilot; 2nd — operating pilot. Any deviation from the standard strategy requires 24 hours\' notice before report time.', zh:'三名飞行机组成员的休息策略：第1次休息由增补飞行员、第2次由操作飞行员1、第3次由操作飞行员2。四名飞行机组成员：第1次休息由增补飞行员、第2次由操作飞行员。每当机长计划偏离上述休息策略时，他应确保至少在计划报告时间前24小时通知飞行机组成员。' },
-    { en:'FDP extension via rest (7.7.1.4) — needs ≥3h total on-board rest: bunk rest extends FDP by (rest × 1/2), capped at 18h (flight crew) / 19h (cabin crew). Seat rest extends by (rest × 1/3), capped at 15h (flight crew) / 16h (cabin crew). First-class suite rest counts the same as bunk rest.', zh:'前提：可用总机上休息时间为3小时或以上，FDP可按以下方式延长——卧铺休息：延长=总休息时间×1/2，最大FDP飞行机组18小时/客舱机组19小时。座位休息：延长=总休息时间×1/3，最大FDP飞行机组15小时/客舱机组16小时。头等舱套房的休息在计算FDP延长时与卧铺休息相同。' },
-    { en:'Planning purposes for flight hours: 3-pilot crew — commander and F/O count 100%, augmenting pilot counts 66% of planned block time. 4-pilot crew — commander and operating F/O count 100%, the two augmenting pilots each count 50%.', zh:'计划目的：3人制机组飞行小时——机长和副驾按100%计算，增补机组成员按计划轮挡时间的66%计算。4人制机组飞行小时——机长和操作副驾按100%计算，2名增补机组成员各按计划轮挡时间的50%计算。' },
-    { en:'Split duty extension (7.7.2): rest <3h gives no extension; rest 3–10h extends the FDP by half the rest taken (rest not including pre/post-flight duty allowances, minimum 30 min). Rest ≤6h needs only a quiet, non-public space; rest >6h needs suitable accommodation.', zh:'当FDP由两个或多个航段组成、由小于最小休息期的时间隔开时，FDP可延长：连续休息小时数少于3小时——无延长；3-10小时——等于所取连续休息小时数的一半。休息期不应包括飞行后和飞行前职责所允许的时间，且应最少为30分钟。当休息期为6小时或更短时，提供安静舒适、不向公众开放的地方即可；如果休息期超过6小时，则应提供合适住宿。' }
+    { key:'p1', en:'On-board rest (7.7.1): with additional crew for in-flight rest, rest should be shared evenly; the commander decides the order unless a specific rest strategy is used. Resting crew need a reclining seat, or a crew rest compartment (CRC) or equivalent lie-flat first/business seating, separated from passengers.', zh:'当携带额外机组成员提供机上休息以延长FDP时，如果情况允许，休息应在机组成员之间平均分配，顺序由机长决定，除非有特定的休息策略可用。休息的机组成员必须提供带有扶手的舒适斜倚座椅，或配备卧铺或等效平躺头等舱或商务舱座位的机组休息室，与任何乘客至少隔一个侧座并与驾驶舱隔开。' },
+    { key:'p2', en:'CRC priority: LRV operations — CRC then first-class seat/suite. Non-LRV operations — CRC, then first-class seat/suite, then business-class seat. Cabin crew use CRC if available, otherwise the LRV/non-LRV rules apply as relevant.', zh:'对于飞行机组，机上休息应按以下优先级计划——LRV运行：1.CRC 2.头等舱座位/套房。非LRV运行：1.CRC 2.头等舱座位/套房 3.商务舱座位。客舱机组应使用CRC（如可用），如CRC不可用，参考LRV运行或非LRV运行的相应规定。' },
+    { key:'p3', en:'Augmented crew rest strategy (3 pilots): 1st rest — augmenting pilot; 2nd — operating pilot 1; 3rd — operating pilot 2. (4 pilots): 1st rest — augmenting pilot; 2nd — operating pilot. Any deviation from the standard strategy requires 24 hours\' notice before report time.', zh:'三名飞行机组成员的休息策略：第1次休息由增补飞行员、第2次由操作飞行员1、第3次由操作飞行员2。四名飞行机组成员：第1次休息由增补飞行员、第2次由操作飞行员。每当机长计划偏离上述休息策略时，他应确保至少在计划报告时间前24小时通知飞行机组成员。' },
+    { key:'p4', en:'FDP extension via rest (7.7.1.4) — needs ≥3h total on-board rest: bunk rest extends FDP by (rest × 1/2), capped at 18h (flight crew) / 19h (cabin crew). Seat rest extends by (rest × 1/3), capped at 15h (flight crew) / 16h (cabin crew). First-class suite rest counts the same as bunk rest.', zh:'前提：可用总机上休息时间为3小时或以上，FDP可按以下方式延长——卧铺休息：延长=总休息时间×1/2，最大FDP飞行机组18小时/客舱机组19小时。座位休息：延长=总休息时间×1/3，最大FDP飞行机组15小时/客舱机组16小时。头等舱套房的休息在计算FDP延长时与卧铺休息相同。' },
+    { key:'p5', en:'Planning purposes for flight hours: 3-pilot crew — commander and F/O count 100%, augmenting pilot counts 66% of planned block time. 4-pilot crew — commander and operating F/O count 100%, the two augmenting pilots each count 50%.', zh:'计划目的：3人制机组飞行小时——机长和副驾按100%计算，增补机组成员按计划轮挡时间的66%计算。4人制机组飞行小时——机长和操作副驾按100%计算，2名增补机组成员各按计划轮挡时间的50%计算。' },
+    { key:'p6', en:'Split duty extension (7.7.2): rest <3h gives no extension; rest 3–10h extends the FDP by half the rest taken (rest not including pre/post-flight duty allowances, minimum 30 min). Rest ≤6h needs only a quiet, non-public space; rest >6h needs suitable accommodation.', zh:'当FDP由两个或多个航段组成、由小于最小休息期的时间隔开时，FDP可延长：连续休息小时数少于3小时——无延长；3-10小时——等于所取连续休息小时数的一半。休息期不应包括飞行后和飞行前职责所允许的时间，且应最少为30分钟。当休息期为6小时或更短时，提供安静舒适、不向公众开放的地方即可；如果休息期超过6小时，则应提供合适住宿。' }
   ]},
   { id:'7.8', title:'Leave Periods', title_zh:'休假期', paragraphs:[
-    { en:'A day off should be scheduled after 4 or more consecutive days of paid leave. No day off is required after: leave under 4 days, emergency leave, leave arranged after roster publication, or unpaid leave.', zh:'4天或以上的带薪休假后，应安排1天休息日。以下休假期后不安排休息日：少于4天的休假、紧急休假、排班发布后安排的休假、无薪休假。' }
+    { key:'p1', en:'A day off should be scheduled after 4 or more consecutive days of paid leave. No day off is required after: leave under 4 days, emergency leave, leave arranged after roster publication, or unpaid leave.', zh:'4天或以上的带薪休假后，应安排1天休息日。以下休假期后不安排休息日：少于4天的休假、紧急休假、排班发布后安排的休假、无薪休假。' }
   ]},
   { id:'7.9', title:'Additional FDP Restrictions', title_zh:'飞行执勤期的额外限制', paragraphs:[
-    { en:'7.9.1/7.9.2 conditions apply only when acclimatised.', zh:'7.9.1和7.9.2中的条件仅适用于机组人员适应当地时间的情况。' },
-    { en:'Late finish / early start (7.9.1): no more than 3 consecutive duties starting/ending in 0100–0659, and no more than 4 within any 7 days. Any such consecutive run must be broken by a rest period of at least 34 hours.', zh:'如果机组人员在连续数天内被要求早报到或晚收工，可能导致睡眠剥夺和疲劳。因此，在0100至0659当地时间之间进行的连续执勤不得超过3次，在任何连续7天内此类执勤不得超过4次。任何连续执勤只能由不少于34小时的连续休息期打破。' },
-    { en:'Regular early starts (up to 5 consecutive): minimum 24h rest before the series begins; duty capped at 9h regardless of sectors; minimum 63h completely free of duty after the series ends.', zh:'从事常规早班执勤（最多连续5次）的机组人员适用以下规定：此类系列执勤开始前的最小休息期为24小时；执勤不得超过9小时，无论航段数如何；此类系列执勤结束后，机组人员应有最少63小时完全脱离所有职责。' },
-    { en:'Night duty (7.9.2): for 3 consecutive night duties (any part in 0200–0459), the preceding duty must finish by 2100 local (or by 2359 if the crew member elects to continue). For 2 consecutive night duties (7.9.2.1), the preceding duty must finish by 2359 local.', zh:'如果计划在0200至0459当地时间之间连续3晚进行任何执勤，机组人员应在此系列连续夜间执勤前的执勤在2100当地时间前结束，以便获得当地夜晚的休息期（如愿意继续排班则可放宽至2359结束）。如果计划连续2晚，前一执勤应在2359当地时间前结束。' },
-    { en:'General rule for late finish/early start/night duty (7.9.2.2): commander\'s discretion extension is limited to 1h/day, max 2h total over 5 consecutive early starts; discretion may never be used to shorten rest; split duty is not permitted.', zh:'以下限制适用于晚收工、早班和夜间执勤：在连续5个早班期间，"机长酌情权"延长执勤限制为每天1小时，此期间内总计2小时；不允许"机长酌情权"缩短休息；不允许分段执勤。' },
-    { en:'7.9.3 — Two-pilot long-range restrictions: when a sector exceeds 7 hours, sectors are "folded" for table lookup: >7h–9h → 2 sectors (acclimatised) / 4 sectors (not acclimatised). >9h–11h → 3 sectors / 4 sectors. >11h → 4 sectors / not applicable. The folded sector count and report time are then used to look up 7.6.2. This restriction does not apply if an additional currently-qualified pilot is carried — use the actual planned sector count instead.', zh:'当飞行机组仅由两名飞行员组成时，允许的FDP应按以下方式修改：当航段计划超过7小时但不超过9小时——适应当地时间折算为2段，未适应折算为4段；超过9小时但不超过11小时——3段/4段；超过11小时——4段/不适用。然后用执勤期开始时间和"折算"航段数进入7.6.2中的相应表格。注意：当任何额外的、当前有效的、有型别等级的飞行员作为机组成员时，这些限制不适用，允许的FDP使用开始时间和实际计划航段数确定。' }
+    { key:'p1', en:'7.9.1/7.9.2 conditions apply only when acclimatised.', zh:'7.9.1和7.9.2中的条件仅适用于机组人员适应当地时间的情况。' },
+    { key:'p2', en:'Late finish / early start (7.9.1): no more than 3 consecutive duties starting/ending in 0100–0659, and no more than 4 within any 7 days. Any such consecutive run must be broken by a rest period of at least 34 hours.', zh:'如果机组人员在连续数天内被要求早报到或晚收工，可能导致睡眠剥夺和疲劳。因此，在0100至0659当地时间之间进行的连续执勤不得超过3次，在任何连续7天内此类执勤不得超过4次。任何连续执勤只能由不少于34小时的连续休息期打破。' },
+    { key:'p3', en:'Regular early starts (up to 5 consecutive): minimum 24h rest before the series begins; duty capped at 9h regardless of sectors; minimum 63h completely free of duty after the series ends.', zh:'从事常规早班执勤（最多连续5次）的机组人员适用以下规定：此类系列执勤开始前的最小休息期为24小时；执勤不得超过9小时，无论航段数如何；此类系列执勤结束后，机组人员应有最少63小时完全脱离所有职责。' },
+    { key:'p4', en:'Night duty (7.9.2): for 3 consecutive night duties (any part in 0200–0459), the preceding duty must finish by 2100 local (or by 2359 if the crew member elects to continue). For 2 consecutive night duties (7.9.2.1), the preceding duty must finish by 2359 local.', zh:'如果计划在0200至0459当地时间之间连续3晚进行任何执勤，机组人员应在此系列连续夜间执勤前的执勤在2100当地时间前结束，以便获得当地夜晚的休息期（如愿意继续排班则可放宽至2359结束）。如果计划连续2晚，前一执勤应在2359当地时间前结束。' },
+    { key:'p5', en:'General rule for late finish/early start/night duty (7.9.2.2): commander\'s discretion extension is limited to 1h/day, max 2h total over 5 consecutive early starts; discretion may never be used to shorten rest; split duty is not permitted.', zh:'以下限制适用于晚收工、早班和夜间执勤：在连续5个早班期间，"机长酌情权"延长执勤限制为每天1小时，此期间内总计2小时；不允许"机长酌情权"缩短休息；不允许分段执勤。' },
+    { key:'p6', en:'7.9.3 — Two-pilot long-range restrictions: when a sector exceeds 7 hours, sectors are "folded" for table lookup: >7h–9h → 2 sectors (acclimatised) / 4 sectors (not acclimatised). >9h–11h → 3 sectors / 4 sectors. >11h → 4 sectors / not applicable. The folded sector count and report time are then used to look up 7.6.2. This restriction does not apply if an additional currently-qualified pilot is carried — use the actual planned sector count instead.', zh:'当飞行机组仅由两名飞行员组成时，允许的FDP应按以下方式修改：当航段计划超过7小时但不超过9小时——适应当地时间折算为2段，未适应折算为4段；超过9小时但不超过11小时——3段/4段；超过11小时——4段/不适用。然后用执勤期开始时间和"折算"航段数进入7.6.2中的相应表格。注意：当任何额外的、当前有效的、有型别等级的飞行员作为机组成员时，这些限制不适用，允许的FDP使用开始时间和实际计划航段数确定。' }
   ]},
   { id:'7.10', title:'Mixed Duties', title_zh:'混合职责', paragraphs:[
-    { en:'Time spent on company-required duty before the scheduled report time counts as part of the following FDP — including pre-FDP office duties and any training/checking/simulator duty performed before a commercial flight in the same duty period (simulator time does not count as a sector, but the allowed FDP starts from the simulator report time).', zh:'当机组人员被要求在计划航班的规定报到时间之前报到，以执行公司要求的任务时，该任务所花费的时间应作为后续FDP的一部分，包括飞行执勤期前进行的办公室职责，以及任何培训职责（无论是接受检查或培训任务，还是作为模拟机支持飞行员或SFI/SFE/TRI/TRE运行），然后在同一执勤期内作为机组成员执行商业航空运输航班。模拟机职责不计为航段，但允许的FDP从模拟机职责的报到时间开始计算。' }
+    { key:'p1', en:'Time spent on company-required duty before the scheduled report time counts as part of the following FDP — including pre-FDP office duties and any training/checking/simulator duty performed before a commercial flight in the same duty period (simulator time does not count as a sector, but the allowed FDP starts from the simulator report time).', zh:'当机组人员被要求在计划航班的规定报到时间之前报到，以执行公司要求的任务时，该任务所花费的时间应作为后续FDP的一部分，包括飞行执勤期前进行的办公室职责，以及任何培训职责（无论是接受检查或培训任务，还是作为模拟机支持飞行员或SFI/SFE/TRI/TRE运行），然后在同一执勤期内作为机组成员执行商业航空运输航班。模拟机职责不计为航段，但允许的FDP从模拟机职责的报到时间开始计算。' }
   ]},
   { id:'7.11', title:'Travelling Time', title_zh:'旅行时间', paragraphs:[
-    { en:'Travelling time (excluding positioning) does not count as duty. If home-to-airport travel normally exceeds 1.5h, temporary accommodation near base should be arranged. Travel to a non-normal departure airport beyond the usual commute time counts as positioning. DXB and DWC are both treated as normal departure airports.', zh:'旅行时间（定位除外）不计为职责。如果从家到正常起飞机场的行程时间通常超过1.5小时，机组人员应安排在基地附近临时住宿。当机组人员被要求从其住所前往非其通常起飞机场的其他机场时，超过从住所到通常起飞机场行程时间的任何旅行时间应计为定位。DXB和DWC被视为通常起飞机场。' }
+    { key:'p1', en:'Travelling time (excluding positioning) does not count as duty. If home-to-airport travel normally exceeds 1.5h, temporary accommodation near base should be arranged. Travel to a non-normal departure airport beyond the usual commute time counts as positioning. DXB and DWC are both treated as normal departure airports.', zh:'旅行时间（定位除外）不计为职责。如果从家到正常起飞机场的行程时间通常超过1.5小时，机组人员应安排在基地附近临时住宿。当机组人员被要求从其住所前往非其通常起飞机场的其他机场时，超过从住所到通常起飞机场行程时间的任何旅行时间应计为定位。DXB和DWC被视为通常起飞机场。' }
   ]},
   { id:'7.12', title:'Delayed Reporting Time', title_zh:'延迟报到时间', paragraphs:[
-    { en:'Applies when a crew member, while still at the rest location, is notified of a change to their reporting time.', zh:'当机组人员在离开休息场所前被告知因计划变更而延迟报到时间时，FDP应按以下方式计算。' },
-    { en:'7.12.1.1 — Delay under 4 hours: the maximum allowable FDP is based on the ORIGINAL scheduled report time; the FDP begins at the ACTUAL report time. (Result: the cap is unchanged, but the usable window is shortened by the delay.)', zh:'延误少于4小时：当延误少于4小时时，最大允许FDP应基于原始报到时间，FDP在实际报到时间开始。也就是说上限不变，但因为开始时间被推后，你可用的时间实际上变短了。' },
-    { en:'7.12.1.2 — Delay of 4 hours or more (but under 10h): the maximum FDP is based on whichever of the scheduled or actual report time gives the MORE RESTRICTIVE table value; the FDP begins 4 hours after the original scheduled report time.', zh:'延误超过4小时：当延误为4小时或以上时，最大FDP应基于计划报到时间和实际报到时间中更严格的时间段，FDP在原始报到时间后4小时开始。' },
-    { en:'7.12.2 — Delay of 10 hours or more: the waiting period is reclassified as rest. The reporting time is reset and 7.12.1 is applied fresh to the new reporting time if a further delay then occurs.', zh:'当机组人员在离开休息场所前被告知报到时间延迟10小时或以上，且该机组人员在双方同意的时间前未再受打扰，则该时段被归类为休息期。如果恢复执勤后再次发生延误，则7.12.1中的相应标准将适用于重新安排的报到时间。' }
+    { key:'p1', en:'Applies when a crew member, while still at the rest location, is notified of a change to their reporting time.', zh:'当机组人员在离开休息场所前被告知因计划变更而延迟报到时间时，FDP应按以下方式计算。' },
+    { key:'p2', en:'7.12.1.1 — Delay under 4 hours: the maximum allowable FDP is based on the ORIGINAL scheduled report time; the FDP begins at the ACTUAL report time. (Result: the cap is unchanged, but the usable window is shortened by the delay.)', zh:'延误少于4小时：当延误少于4小时时，最大允许FDP应基于原始报到时间，FDP在实际报到时间开始。也就是说上限不变，但因为开始时间被推后，你可用的时间实际上变短了。' },
+    { key:'p3', en:'7.12.1.2 — Delay of 4 hours or more (but under 10h): the maximum FDP is based on whichever of the scheduled or actual report time gives the MORE RESTRICTIVE table value; the FDP begins 4 hours after the original scheduled report time.', zh:'延误超过4小时：当延误为4小时或以上时，最大FDP应基于计划报到时间和实际报到时间中更严格的时间段，FDP在原始报到时间后4小时开始。' },
+    { key:'p4', en:'7.12.2 — Delay of 10 hours or more: the waiting period is reclassified as rest. The reporting time is reset and 7.12.1 is applied fresh to the new reporting time if a further delay then occurs.', zh:'当机组人员在离开休息场所前被告知报到时间延迟10小时或以上，且该机组人员在双方同意的时间前未再受打扰，则该时段被归类为休息期。如果恢复执勤后再次发生延误，则7.12.1中的相应标准将适用于重新安排的报到时间。' }
   ]},
   { id:'7.13', title:'Positioning', title_zh:'定位', paragraphs:[
-    { en:'All positioning required by the operator counts as duty, but not as a sector when calculating FDP. The FDP starts no later than the crew member\'s report time for the positioning journey. If, after positioning, the crew member has less than minimum rest in suitable accommodation before an FDP, the positioning sector must be counted in the sector total for that FDP\'s table lookup if split duty is being used.', zh:'应公司要求进行的所有定位时间均计为职责，但在计算FDP时定位不计为航段。FDP不迟于机组人员为定位旅程报到的开始时间。如果定位旅程后，机组人员在公司提供的合适住宿中度过少于最小休息期，然后执行FDP，则在计算允许FDP时，如果要求分段执勤，定位应计为航段。' }
+    { key:'p1', en:'All positioning required by the operator counts as duty, but not as a sector when calculating FDP. The FDP starts no later than the crew member\'s report time for the positioning journey. If, after positioning, the crew member has less than minimum rest in suitable accommodation before an FDP, the positioning sector must be counted in the sector total for that FDP\'s table lookup if split duty is being used.', zh:'应公司要求进行的所有定位时间均计为职责，但在计算FDP时定位不计为航段。FDP不迟于机组人员为定位旅程报到的开始时间。如果定位旅程后，机组人员在公司提供的合适住宿中度过少于最小休息期，然后执行FDP，则在计算允许FDP时，如果要求分段执勤，定位应计为航段。' }
   ]},
   { id:'7.14', title:'Standby Duty', title_zh:'待命职责', paragraphs:[
-    { en:'The start time, end time and nature of standby duty must be defined and notified. The start time of standby duty determines the allowable FDP — UNLESS the actual FDP begins in a more restrictive time band, in which case that stricter limit applies.', zh:'待命职责的开始时间、结束时间和性质将予以定义并通知机组人员。待命职责的开始时间决定允许的FDP，但当实际FDP在更严格的时间段开始时，则适用该FDP限制。' },
-    { en:'If a crew member is called from standby to perform duty, the standby duty ends when the crew member reports at the designated reporting point. The subsequent minimum rest period is determined by the length of the standby duty plus any positioning time plus any FDP completed.', zh:'如果机组人员从待命被召唤执行职责，待命职责将在机组人员在指定报到点报到时结束。后续最小休息期的长度将由待命职责长度加上任何定位时间和完成的任何FDP决定。' },
-    { en:'After a standby period where the crew member was NOT called out, the next duty must be at least 12 hours later. Similarly, after a Contactable period ends, the next duty must be at least 10 hours later.', zh:'在未被召唤执行职责的任何待命期之后，下一职责期前必须至少休息12小时。同样，在可联系期结束后，下一职责期前必须至少间隔10小时。' },
-    { en:'7.14.1 — Home / provided-accommodation standby: when standby is held at home or in company-provided suitable accommodation between 2200–0800 local, and the crew member is given 2 hours\' notice or less of the reporting time, the allowable FDP is calculated using the designated reporting time.', zh:'当在2200至0800当地时间期间在家或在公司提供的合适住宿中进行待命，且机组人员收到2小时或更少的报到时间通知时，允许的FDP使用指定报到地点的报到时间计算。' },
-    { en:'7.14.2 — Airport standby: when the crew member is on immediate standby at the airport, the allowable FDP is calculated using the start time of the standby duty.', zh:'当机组人员在机场处于立即待命状态时，允许的FDP使用待命职责的开始时间计算。' },
-    { en:'7.14.3 — Standby duty limits: maximum standby duty in all cases — 12 hours. Standby followed by FDP — two cases: Case A: if called before completing 6 hours of standby, the allowable total duty period is the standby time taken PLUS the FDP allowed by table 7.6.2. Case B: if called after 6 hours or more of standby, the allowable total duty period is ALL standby time PLUS the table-allowed FDP, MINUS the standby time exceeding 6 hours. Note: "total duty period" here means standby time plus the table-allowed FDP only — for actual operational accumulation and minimum rest, use actual standby time + actual FDP + post-flight duty + positioning.', zh:'待命职责（所有情况）最大持续时间：12小时。待命后跟FDP分两种情况——情况A：如果机组人员在完成6小时待命职责前被从待命召唤执行FDP，则允许的总执勤期为待命所花费时间与7.6.2表格中允许的FDP之和。情况B：如果机组人员在完成6小时或以上待命职责后被召唤，则允许的总执勤期为所有待命时间与7.6.2允许的FDP之和，减去超过6小时的待命时间。注意："总执勤期"仅指待命时间加上7.6.2允许的FDP，在实际运行日，累积执勤总和和最小休息期，按实际待命时间加实际FDP加飞行后职责加定位计算。' }
+    { key:'p1', en:'The start time, end time and nature of standby duty must be defined and notified. The start time of standby duty determines the allowable FDP — UNLESS the actual FDP begins in a more restrictive time band, in which case that stricter limit applies.', zh:'待命职责的开始时间、结束时间和性质将予以定义并通知机组人员。待命职责的开始时间决定允许的FDP，但当实际FDP在更严格的时间段开始时，则适用该FDP限制。' },
+    { key:'p2', en:'If a crew member is called from standby to perform duty, the standby duty ends when the crew member reports at the designated reporting point. The subsequent minimum rest period is determined by the length of the standby duty plus any positioning time plus any FDP completed.', zh:'如果机组人员从待命被召唤执行职责，待命职责将在机组人员在指定报到点报到时结束。后续最小休息期的长度将由待命职责长度加上任何定位时间和完成的任何FDP决定。' },
+    { key:'p3', en:'After a standby period where the crew member was NOT called out, the next duty must be at least 12 hours later. Similarly, after a Contactable period ends, the next duty must be at least 10 hours later.', zh:'在未被召唤执行职责的任何待命期之后，下一职责期前必须至少休息12小时。同样，在可联系期结束后，下一职责期前必须至少间隔10小时。' },
+    { key:'p4', en:'7.14.1 — Home / provided-accommodation standby: when standby is held at home or in company-provided suitable accommodation between 2200–0800 local, and the crew member is given 2 hours\' notice or less of the reporting time, the allowable FDP is calculated using the designated reporting time.', zh:'当在2200至0800当地时间期间在家或在公司提供的合适住宿中进行待命，且机组人员收到2小时或更少的报到时间通知时，允许的FDP使用指定报到地点的报到时间计算。' },
+    { key:'p5', en:'7.14.2 — Airport standby: when the crew member is on immediate standby at the airport, the allowable FDP is calculated using the start time of the standby duty.', zh:'当机组人员在机场处于立即待命状态时，允许的FDP使用待命职责的开始时间计算。' },
+    { key:'p6', en:'7.14.3 — Standby duty limits: maximum standby duty in all cases — 12 hours. Standby followed by FDP — two cases: Case A: if called before completing 6 hours of standby, the allowable total duty period is the standby time taken PLUS the FDP allowed by table 7.6.2. Case B: if called after 6 hours or more of standby, the allowable total duty period is ALL standby time PLUS the table-allowed FDP, MINUS the standby time exceeding 6 hours. Note: "total duty period" here means standby time plus the table-allowed FDP only — for actual operational accumulation and minimum rest, use actual standby time + actual FDP + post-flight duty + positioning.', zh:'待命职责（所有情况）最大持续时间：12小时。待命后跟FDP分两种情况——情况A：如果机组人员在完成6小时待命职责前被从待命召唤执行FDP，则允许的总执勤期为待命所花费时间与7.6.2表格中允许的FDP之和。情况B：如果机组人员在完成6小时或以上待命职责后被召唤，则允许的总执勤期为所有待命时间与7.6.2允许的FDP之和，减去超过6小时的待命时间。注意："总执勤期"仅指待命时间加上7.6.2允许的FDP，在实际运行日，累积执勤总和和最小休息期，按实际待命时间加实际FDP加飞行后职责加定位计算。' }
   ]},
   { id:'7.15', title:'Commander\'s Discretion to Extend FDP', title_zh:'机长延长飞行执勤期的酌情权', paragraphs:[
-    { en:'The commander may, at their discretion — having regard to the circumstances of other crew members — extend the FDP beyond the 7.6.2 table allowance, provided they are satisfied the flight can be conducted safely.', zh:'机长可在其酌情权下，并在注意到其他机组成员的情况后，将FDP延长至7.6.2允许的范围之外，前提是他确信航班可以安全进行。' },
-    { en:'The maximum allowable FDP is determined by the planned block time and folded sector count (if applicable); diversions increase the folded sector count.', zh:'最大允许FDP应由计划轮挡时间和折算航段数（如适用）确定。在备降情况下，折算航段数应增加额外航段数。' },
-    { en:'Maximum discretionary extension is 3 hours, except in an emergency (defined as a situation the commander judges poses a serious risk to the health or safety of crew/passengers, or endangers life).', zh:'最大允许延长3小时，紧急情况除外。就延长飞行执勤期而言，紧急情况是指机长判断对机组和乘客的健康或安全构成严重风险，或危及他人生命的情况。' },
-    { en:'On a single-sector flight, the commander may exercise up to 3 hours of discretion.', zh:'在单段飞行中，机长可行使最多3小时的酌情权。' },
-    { en:'On a multi-sector flight, the commander may exercise up to 2 hours of discretion before any sector except the last; discretion before the LAST sector may extend up to 3 hours.', zh:'在多段飞行中，机长可在除最后一段外的任何航段前行使最多2小时的酌情权，最后一段的酌情权可延长至3小时。' },
-    { en:'In special circumstances the commander may exercise discretion after a shortened rest period, but only to the extent needed for an unforeseen circumstance arising during the final sector.', zh:'特殊情况下，机长可在缩短休息期后行使酌情权延长FDP，但仅限于允许在最后航段期间出现的不可预见情况所必需的程度。' },
-    { en:'Reporting (7.15.1): every use of discretion must be reported on the discretion report form. If the extension exceeds 2 hours, or follows a shortened rest period, Emirates must submit the commander\'s written report and management comments to the authority within 14 days of the aircraft\'s return to base.', zh:'每当机长延长FDP时，应在酌情报告表上向公司报告。如果延长超过2小时，或在任何缩短休息期后行使，公司应在飞机返回基地后14天内向当局提交机长的书面报告及管理层意见。' }
+    { key:'p1', en:'The commander may, at their discretion — having regard to the circumstances of other crew members — extend the FDP beyond the 7.6.2 table allowance, provided they are satisfied the flight can be conducted safely.', zh:'机长可在其酌情权下，并在注意到其他机组成员的情况后，将FDP延长至7.6.2允许的范围之外，前提是他确信航班可以安全进行。' },
+    { key:'p2', en:'The maximum allowable FDP is determined by the planned block time and folded sector count (if applicable); diversions increase the folded sector count.', zh:'最大允许FDP应由计划轮挡时间和折算航段数（如适用）确定。在备降情况下，折算航段数应增加额外航段数。' },
+    { key:'p3', en:'Maximum discretionary extension is 3 hours, except in an emergency (defined as a situation the commander judges poses a serious risk to the health or safety of crew/passengers, or endangers life).', zh:'最大允许延长3小时，紧急情况除外。就延长飞行执勤期而言，紧急情况是指机长判断对机组和乘客的健康或安全构成严重风险，或危及他人生命的情况。' },
+    { key:'p4', en:'On a single-sector flight, the commander may exercise up to 3 hours of discretion.', zh:'在单段飞行中，机长可行使最多3小时的酌情权。' },
+    { key:'p5', en:'On a multi-sector flight, the commander may exercise up to 2 hours of discretion before any sector except the last; discretion before the LAST sector may extend up to 3 hours.', zh:'在多段飞行中，机长可在除最后一段外的任何航段前行使最多2小时的酌情权，最后一段的酌情权可延长至3小时。' },
+    { key:'p6', en:'In special circumstances the commander may exercise discretion after a shortened rest period, but only to the extent needed for an unforeseen circumstance arising during the final sector.', zh:'特殊情况下，机长可在缩短休息期后行使酌情权延长FDP，但仅限于允许在最后航段期间出现的不可预见情况所必需的程度。' },
+    { key:'p7', en:'Reporting (7.15.1): every use of discretion must be reported on the discretion report form. If the extension exceeds 2 hours, or follows a shortened rest period, Emirates must submit the commander\'s written report and management comments to the authority within 14 days of the aircraft\'s return to base.', zh:'每当机长延长FDP时，应在酌情报告表上向公司报告。如果延长超过2小时，或在任何缩短休息期后行使，公司应在飞机返回基地后14天内向当局提交机长的书面报告及管理层意见。' }
   ]},
   { id:'7.16', title:'Rest Periods — Flight Crew', title_zh:'休息期——飞行机组', paragraphs:[
-    { en:'Minimum rest before an FDP is the greater of: (a) at least as long as the preceding duty period, or (b) 12 hours.', zh:'飞行机组在执行飞行执勤期前将获得的最小休息期为以下a或b中的较大者：a. 至少与前一执勤期一样长；或 b. 12小时。' },
-    { en:'7.16.1.1 — Base rest reduction: in special circumstances, discretion may reduce the required rest by up to 1 hour, provided flight crew rest stays at least 12h and cabin crew rest at least 11h. The commander of the following flight must be told a reduced rest was used.', zh:'在基地，特殊情况下，可要求机组人员行使酌情权将所需休息期最多缩短1小时，前提是飞行机组休息期保持至少12小时，客舱机组保持11小时。如果使用此酌情权，必须确保缩短休息期后航班的机长被告知已使用缩短休息。' },
-    { en:'7.16.1.2 — Outstation rest reduction: when the rest period is exactly 12 hours and suitable accommodation is provided, it may be reduced by 1 hour. If airport-to-accommodation travel exceeds 30 minutes one-way, the rest period increases by the excess over 1 hour total travel. In both cases, the accommodation must be available for at least 10 hours (check-in to check-out).', zh:'在基地外，当机组人员获得的休息期为12小时且公司提供了合适住宿时，该休息期可缩短1小时。如果机场和住宿之间的旅行时间单程超过30分钟，休息期将增加总旅行时间超过1小时的部分。在这两种情况下，分配给机组人员的住宿必须至少可供使用10小时。' },
-    { en:'7.16.1.3 — Additional rest requirements: after any duty exceeding 18 hours (including positioning), the following rest must include one local night. Rest may not be shortened after consecutive periods of shortened rest and extended FDP.', zh:'任何超过18小时的执勤期（包括定位时间）后，后续休息期必须包括一个当地夜晚。在连续缩短休息和延长FDP后，休息期不能缩短。' },
-    { en:'7.16.1.4 — Minimum rest at Dubai: a pilot returning to Dubai on their own time after a non-pairing duty or approved training must arrive with enough time for at least 12 hours\' rest before the next required report time. LRV rules (7.E) apply for LRV flights.', zh:'飞行员在完成非配对一部分或任何经批准的培训任务后，以自己的时间返回迪拜，应在足够时间内返回迪拜，以允许下一航班或任务的规定报到时间前有最少12小时休息。此外，对于LRV航班，7.E的规定适用。' }
+    { key:'p1', en:'Minimum rest before an FDP is the greater of: (a) at least as long as the preceding duty period, or (b) 12 hours.', zh:'飞行机组在执行飞行执勤期前将获得的最小休息期为以下a或b中的较大者：a. 至少与前一执勤期一样长；或 b. 12小时。' },
+    { key:'p2', en:'7.16.1.1 — Base rest reduction: in special circumstances, discretion may reduce the required rest by up to 1 hour, provided flight crew rest stays at least 12h and cabin crew rest at least 11h. The commander of the following flight must be told a reduced rest was used.', zh:'在基地，特殊情况下，可要求机组人员行使酌情权将所需休息期最多缩短1小时，前提是飞行机组休息期保持至少12小时，客舱机组保持11小时。如果使用此酌情权，必须确保缩短休息期后航班的机长被告知已使用缩短休息。' },
+    { key:'p3', en:'7.16.1.2 — Outstation rest reduction: when the rest period is exactly 12 hours and suitable accommodation is provided, it may be reduced by 1 hour. If airport-to-accommodation travel exceeds 30 minutes one-way, the rest period increases by the excess over 1 hour total travel. In both cases, the accommodation must be available for at least 10 hours (check-in to check-out).', zh:'在基地外，当机组人员获得的休息期为12小时且公司提供了合适住宿时，该休息期可缩短1小时。如果机场和住宿之间的旅行时间单程超过30分钟，休息期将增加总旅行时间超过1小时的部分。在这两种情况下，分配给机组人员的住宿必须至少可供使用10小时。' },
+    { key:'p4', en:'7.16.1.3 — Additional rest requirements: after any duty exceeding 18 hours (including positioning), the following rest must include one local night. Rest may not be shortened after consecutive periods of shortened rest and extended FDP.', zh:'任何超过18小时的执勤期（包括定位时间）后，后续休息期必须包括一个当地夜晚。在连续缩短休息和延长FDP后，休息期不能缩短。' },
+    { key:'p5', en:'7.16.1.4 — Minimum rest at Dubai: a pilot returning to Dubai on their own time after a non-pairing duty or approved training must arrive with enough time for at least 12 hours\' rest before the next required report time. LRV rules (7.E) apply for LRV flights.', zh:'飞行员在完成非配对一部分或任何经批准的培训任务后，以自己的时间返回迪拜，应在足够时间内返回迪拜，以允许下一航班或任务的规定报到时间前有最少12小时休息。此外，对于LRV航班，7.E的规定适用。' }
   ]},
   { id:'7.17', title:'Commander\'s Discretion to Shorten Rest', title_zh:'机长缩短休息期的酌情权', paragraphs:[
-    { en:'The commander may, at discretion, shorten a rest period, limited only by the accommodation being available for at least 10 hours. This must be treated as a special circumstance and not used to shorten consecutive rest periods. If the preceding FDP was extended, rest may be shortened only if the following allowable FDP is reduced by the same amount. The commander may never shorten accommodation-based rest below 10 hours.', zh:'机长可在其酌情权下缩短休息期，但仅限于分配给机组人员的住宿必须至少可供使用10小时。行使此酌情权必须被视为特殊情况，且不得用于缩短连续休息期。如果前一FDP已延长，休息期可缩短，前提是后续允许的FDP也减少相同数量。在任何情况下，机长不得行使酌情权将住宿休息期缩短至10小时以下。' },
-    { en:'Reporting (7.17.1): every shortening must be reported. If it exceeds 1 hour, Emirates must submit the commander\'s written report and management comments to the GCAA within 14 days of the aircraft\'s return to base.', zh:'每当机长缩短休息期时，应在酌情报告表上报告。如果缩短超过1小时，公司应在飞机返回基地后14天内向GCAA提交机长的书面报告及管理层意见。' }
+    { key:'p1', en:'The commander may, at discretion, shorten a rest period, limited only by the accommodation being available for at least 10 hours. This must be treated as a special circumstance and not used to shorten consecutive rest periods. If the preceding FDP was extended, rest may be shortened only if the following allowable FDP is reduced by the same amount. The commander may never shorten accommodation-based rest below 10 hours.', zh:'机长可在其酌情权下缩短休息期，但仅限于分配给机组人员的住宿必须至少可供使用10小时。行使此酌情权必须被视为特殊情况，且不得用于缩短连续休息期。如果前一FDP已延长，休息期可缩短，前提是后续允许的FDP也减少相同数量。在任何情况下，机长不得行使酌情权将住宿休息期缩短至10小时以下。' },
+    { key:'p2', en:'Reporting (7.17.1): every shortening must be reported. If it exceeds 1 hour, Emirates must submit the commander\'s written report and management comments to the GCAA within 14 days of the aircraft\'s return to base.', zh:'每当机长缩短休息期时，应在酌情报告表上报告。如果缩短超过1小时，公司应在飞机返回基地后14天内向GCAA提交机长的书面报告及管理层意见。' }
   ]},
   { id:'7.18', title:'Duty Cycles & Days Off', title_zh:'执勤周期和休息日', paragraphs:[
-    { en:'Days off should be spent at base where possible. A single day off must include 2 local nights, at least 34 hours.', zh:'尽可能在基地休假。单日休息日应包括2个当地夜晚，至少持续34小时。' },
-    { en:'a) No more than 7 consecutive duty days before a day off. b) 2 consecutive days off within any 14 days, immediately following a previous 2-day-off period. c) At least 7 days off within any 28 days. d) At least 24 days off within any 84 days.', zh:'机组成员：连续执勤不得超过7天，然后必须安排至少1天休息日；在任何连续14天内应有2天连续休息日，紧接前一个2天连续休息日之后；在任何连续28天内应有最少7天休息日；在任何连续84天内应有至少24天休息日。' },
-    { en:'Crew may be positioned or operated back to base on day 8 or 13 with SVP-F (or delegate) approval; an extra day off is given immediately on return to base.', zh:'机组成员可在第8天或第13天经SVP-F或其指定人员批准定位或运行回基地。返回基地后应立即给予额外一天休息日。' }
+    { key:'p1', en:'Days off should be spent at base where possible. A single day off must include 2 local nights, at least 34 hours.', zh:'尽可能在基地休假。单日休息日应包括2个当地夜晚，至少持续34小时。' },
+    { key:'p2', en:'a) No more than 7 consecutive duty days before a day off. b) 2 consecutive days off within any 14 days, immediately following a previous 2-day-off period. c) At least 7 days off within any 28 days. d) At least 24 days off within any 84 days.', zh:'机组成员：连续执勤不得超过7天，然后必须安排至少1天休息日；在任何连续14天内应有2天连续休息日，紧接前一个2天连续休息日之后；在任何连续28天内应有最少7天休息日；在任何连续84天内应有至少24天休息日。' },
+    { key:'p3', en:'Crew may be positioned or operated back to base on day 8 or 13 with SVP-F (or delegate) approval; an extra day off is given immediately on return to base.', zh:'机组成员可在第8天或第13天经SVP-F或其指定人员批准定位或运行回基地。返回基地后应立即给予额外一天休息日。' }
   ]},
   { id:'7.19', title:'Cumulative Duty Hours', title_zh:'累积执勤小时数', paragraphs:[
-    { en:'Maximum cumulative duty for flight crew: 55h in any 7 days (may rise to 60h if a series is disrupted by an unforeseen delay); 95h in any 14 days; 190h in any 28 days.', zh:'飞行机组的最大执勤小时数不得超过：任何连续7天内55小时（当一系列执勤期一旦开始遇到不可预见的延误时，此限制可增至60小时）；任何连续14天内95小时；任何连续28天内190小时。' },
-    { en:'If a flight crew member has no standby or flying duty for 28 or more consecutive days, that period does not count toward the cumulative totals — but once they are due to return to standby/flying duty, hours from the preceding 28 days must be tracked to ensure compliance.', zh:'当飞行机组成员连续28天或以上未被排班待命或飞行职责时，则任何工作执勤小时数不计入累积总数。但是，当预计机组成员将返回待命或飞行职责时，则必须记录该职责前28天内的工作执勤小时数，用于确保机组成员符合本方案的要求。' }
+    { key:'p1', en:'Maximum cumulative duty for flight crew: 55h in any 7 days (may rise to 60h if a series is disrupted by an unforeseen delay); 95h in any 14 days; 190h in any 28 days.', zh:'飞行机组的最大执勤小时数不得超过：任何连续7天内55小时（当一系列执勤期一旦开始遇到不可预见的延误时，此限制可增至60小时）；任何连续14天内95小时；任何连续28天内190小时。' },
+    { key:'p2', en:'If a flight crew member has no standby or flying duty for 28 or more consecutive days, that period does not count toward the cumulative totals — but once they are due to return to standby/flying duty, hours from the preceding 28 days must be tracked to ensure compliance.', zh:'当飞行机组成员连续28天或以上未被排班待命或飞行职责时，则任何工作执勤小时数不计入累积总数。但是，当预计机组成员将返回待命或飞行职责时，则必须记录该职责前28天内的工作执勤小时数，用于确保机组成员符合本方案的要求。' }
   ]},
   { id:'7.20', title:'Absolute Flight Time Limits', title_zh:'飞行小时绝对限制', paragraphs:[
-    { en:'No one may act as flight crew if: (a) total flight time in the 28 consecutive days ending on the day the flight begins exceeds 100 hours (a single sector may still be completed on day 28 even if it pushes the total over 100h — no further sector may follow that day); or (b) flight time exceeds 900 hours in the 12 consecutive months ending with the last day of the previous month.', zh:'任何人不得在以下情况下作为飞机飞行机组成员行事：在飞行开始的当天结束的28个连续天内，所有先前飞行时间的总和超过100小时（在第28天，飞行机组成员可以出发执行单段飞行，并可完成该段，即使总飞行小时数将超过100小时，但不能在当天继续执行任何后续航段）；或在上个月结束的12个连续月期间内，飞行时间超过900小时。' },
-    { en:'Flight hours counted for an augmenting crew member toward these absolute limits are based on actual time recorded at the operating station in the flight report.', zh:'增补机组成员为计算飞行小时绝对限制而计入的飞行小时数，将基于航班报告中记录的实际在操作座位上的时间。' }
+    { key:'p1', en:'No one may act as flight crew if: (a) total flight time in the 28 consecutive days ending on the day the flight begins exceeds 100 hours (a single sector may still be completed on day 28 even if it pushes the total over 100h — no further sector may follow that day); or (b) flight time exceeds 900 hours in the 12 consecutive months ending with the last day of the previous month.', zh:'任何人不得在以下情况下作为飞机飞行机组成员行事：在飞行开始的当天结束的28个连续天内，所有先前飞行时间的总和超过100小时（在第28天，飞行机组成员可以出发执行单段飞行，并可完成该段，即使总飞行小时数将超过100小时，但不能在当天继续执行任何后续航段）；或在上个月结束的12个连续月期间内，飞行时间超过900小时。' },
+    { key:'p2', en:'Flight hours counted for an augmenting crew member toward these absolute limits are based on actual time recorded at the operating station in the flight report.', zh:'增补机组成员为计算飞行小时绝对限制而计入的飞行小时数，将基于航班报告中记录的实际在操作座位上的时间。' }
   ]},
   { id:'7.21', title:'Cabin Crew Rules', title_zh:'客舱机组规则', paragraphs:[
-    { en:'Reporting time — cabin crew: base 1h30m before STD; outstation 1h05m before STD.', zh:'客舱机组的报告时间：迪拜基地运行客舱机组STD前1小时30分钟；外站运行客舱机组STD前1小时05分钟。' },
-    { en:'Table 7.21.2.1 (cabin crew, acclimatised): 0600–0759: 14/13.25/12.5/11.75/11/10.5/10/10. 0800–1259: 15/14.25/13.5/12.75/12/11.5/11/10.5. 1300–1759: 14/13.25/12.5/11.75/11/10.5/10/10. 1800–2159: 13/12.25/11.5/10.75/10/10/10/10. 2200–0559: 12/11.25/10.5/10/10/10/10/10.', zh:'客舱机组－适应当地时间表：0600-0759：14、13¼、12½、11¾、11、10½、10、10。0800-1259：15、14¼、13½、12¾、12、11½、11、10½。1300-1759：14、13¼、12½、11¾、11、10½、10、10。1800-2159：13、12¼、11½、10¾、10、10、10、10。2200-0559：12、11¼、10½、10、10、10、10、10。' },
-    { en:'Table 7.21.2.2 (cabin crew, not acclimatised): ≤18h or >30h: 14/13.25/12.5/11.75/11/10.25/10. 18–30h: 12.5/12/11.5/10.75/10/10/10.', zh:'客舱机组－未适应当地时间表：最多18小时或超过30小时：14、13¼、12½、11¾、11、10¼、10。18至30小时之间：12½、12、11½、10¾、10、10、10。' },
-    { en:'Minimum rest — cabin crew: greater of (a) previous duty period minus 1 hour, or (b) 11 hours. Same reduction rules as flight crew apply.', zh:'客舱机组在执行飞行执勤期前将获得的最小休息期为以下a或b中的较大者：比前一执勤期少一小时；或11小时。休息缩短等规定与飞行机组相同。' },
-    { en:'Minimum rest at Dubai — cabin crew: at least 11 hours before next required report time.', zh:'客舱机组在完成非配对一部分或任何经批准的培训任务后，以自己的时间返回迪拜，应在足够时间内返回迪拜，以允许下一航班或任务的规定报到时间前有最少11小时休息。' },
-    { en:'Cumulative duty — cabin crew: 60h/7 days (65h if disrupted), 115h/14 days, 200h/28 days, 600h/84 days.', zh:'客舱机组的最大执勤小时数不得超过：任何连续7天内60小时（延误可增至65小时）；任何连续14天内115小时；任何连续28天内200小时；任何连续84天内600小时。' },
-    { en:'Absolute flight time limits — cabin crew: 120h in 28 days; 1200h in 12 months.', zh:'任何人不得在以下情况下作为飞机客舱机组成员行事：28个连续天内所有先前飞行时间的总和超过120小时；或12个连续月期间内，飞行时间超过1200小时。' },
-    { en:'Days off — cabin crew: ≤7 consecutive duty days before a day off; 2 consecutive days off within 14 days; ≥8 days off within 28 days; ≥26 days off within 84 days; ≥100 days off within 12 months (excluding annual leave).', zh:'在安排至少一天休息日前，连续执勤不得超过7天；在任何连续14天内应有2天连续休息日；在任何连续28天内应有最少8天休息日；在任何连续84天内应有至少26天休息日；在任何12个连续月内应有至少100天休息日（不包括年假）。' },
-    { en:'Early start FDP is based on the flight crew\'s report time for the FDP limit, but starts from the cabin crew\'s own report time.', zh:'客舱机组的早班FDP和限制应基于飞行机组报告飞行执勤期的时间，但该FDP将从客舱机组的报告时间开始。' },
-    { en:'Standby + subsequent FDP total may be 1 hour longer than the equivalent flight-crew allowance.', zh:'待命时间和后续FDP的总和可比飞行机组允许的长1小时。' },
-    { en:'Cabin crew augmentation: when FDP exceeds normal limits, rest must be at least double the extension needed, or 3 hours, whichever is greater; seat rest FDP capped at 16h; flights starting/ending at Dubai in a single duty period must carry 2 pursers, the second responsible only while the first rests.', zh:'当计划FDP超过FTL方案公布的限制时，休息期必须至少为所需延长的两倍或3小时（取较大者）；座位休息的最大允许FDP为16小时；在单一执勤期内从迪拜出发和终止的航班应安排2名乘务长，第二名乘务长仅在主管乘务长休息时负责。' }
+    { key:'p1', en:'Reporting time — cabin crew: base 1h30m before STD; outstation 1h05m before STD.', zh:'客舱机组的报告时间：迪拜基地运行客舱机组STD前1小时30分钟；外站运行客舱机组STD前1小时05分钟。' },
+    { key:'p2', en:'Table 7.21.2.1 (cabin crew, acclimatised): 0600–0759: 14/13.25/12.5/11.75/11/10.5/10/10. 0800–1259: 15/14.25/13.5/12.75/12/11.5/11/10.5. 1300–1759: 14/13.25/12.5/11.75/11/10.5/10/10. 1800–2159: 13/12.25/11.5/10.75/10/10/10/10. 2200–0559: 12/11.25/10.5/10/10/10/10/10.', zh:'客舱机组－适应当地时间表：0600-0759：14、13¼、12½、11¾、11、10½、10、10。0800-1259：15、14¼、13½、12¾、12、11½、11、10½。1300-1759：14、13¼、12½、11¾、11、10½、10、10。1800-2159：13、12¼、11½、10¾、10、10、10、10。2200-0559：12、11¼、10½、10、10、10、10、10。' },
+    { key:'p3', en:'Table 7.21.2.2 (cabin crew, not acclimatised): ≤18h or >30h: 14/13.25/12.5/11.75/11/10.25/10. 18–30h: 12.5/12/11.5/10.75/10/10/10.', zh:'客舱机组－未适应当地时间表：最多18小时或超过30小时：14、13¼、12½、11¾、11、10¼、10。18至30小时之间：12½、12、11½、10¾、10、10、10。' },
+    { key:'p4', en:'Minimum rest — cabin crew: greater of (a) previous duty period minus 1 hour, or (b) 11 hours. Same reduction rules as flight crew apply.', zh:'客舱机组在执行飞行执勤期前将获得的最小休息期为以下a或b中的较大者：比前一执勤期少一小时；或11小时。休息缩短等规定与飞行机组相同。' },
+    { key:'p5', en:'Minimum rest at Dubai — cabin crew: at least 11 hours before next required report time.', zh:'客舱机组在完成非配对一部分或任何经批准的培训任务后，以自己的时间返回迪拜，应在足够时间内返回迪拜，以允许下一航班或任务的规定报到时间前有最少11小时休息。' },
+    { key:'p6', en:'Cumulative duty — cabin crew: 60h/7 days (65h if disrupted), 115h/14 days, 200h/28 days, 600h/84 days.', zh:'客舱机组的最大执勤小时数不得超过：任何连续7天内60小时（延误可增至65小时）；任何连续14天内115小时；任何连续28天内200小时；任何连续84天内600小时。' },
+    { key:'p7', en:'Absolute flight time limits — cabin crew: 120h in 28 days; 1200h in 12 months.', zh:'任何人不得在以下情况下作为飞机客舱机组成员行事：28个连续天内所有先前飞行时间的总和超过120小时；或12个连续月期间内，飞行时间超过1200小时。' },
+    { key:'p8', en:'Days off — cabin crew: ≤7 consecutive duty days before a day off; 2 consecutive days off within 14 days; ≥8 days off within 28 days; ≥26 days off within 84 days; ≥100 days off within 12 months (excluding annual leave).', zh:'在安排至少一天休息日前，连续执勤不得超过7天；在任何连续14天内应有2天连续休息日；在任何连续28天内应有最少8天休息日；在任何连续84天内应有至少26天休息日；在任何12个连续月内应有至少100天休息日（不包括年假）。' },
+    { key:'p9', en:'Early start FDP is based on the flight crew\'s report time for the FDP limit, but starts from the cabin crew\'s own report time.', zh:'客舱机组的早班FDP和限制应基于飞行机组报告飞行执勤期的时间，但该FDP将从客舱机组的报告时间开始。' },
+    { key:'p10', en:'Standby + subsequent FDP total may be 1 hour longer than the equivalent flight-crew allowance.', zh:'待命时间和后续FDP的总和可比飞行机组允许的长1小时。' },
+    { key:'p11', en:'Cabin crew augmentation: when FDP exceeds normal limits, rest must be at least double the extension needed, or 3 hours, whichever is greater; seat rest FDP capped at 16h; flights starting/ending at Dubai in a single duty period must carry 2 pursers, the second responsible only while the first rests.', zh:'当计划FDP超过FTL方案公布的限制时，休息期必须至少为所需延长的两倍或3小时（取较大者）；座位休息的最大允许FDP为16小时；在单一执勤期内从迪拜出发和终止的航班应安排2名乘务长，第二名乘务长仅在主管乘务长休息时负责。' }
   ]},
   { id:'7.A', title:'Appendix 1 — FDP +30 Minutes', title_zh:'附件1——FDP加30分钟', paragraphs:[
-    { en:'Flight crew: applies only when the planned sector is ≤7h. Adds 30 minutes to the 7.6.2.1 allowance. Crew must be acclimatised with at least one local night immediately before report time. Commander\'s normal discretion is reduced to max 2.5h (max 1.5h before leaving the initial departure point). Max 4 such extended-FDP flights in any 28 days; max cumulative duty 185h in any 4 weeks; min 8 days off in 28 days for crew using this. No dispatch crew used.', zh:'当计划航段长度不超过7小时，公司可在7.6.2.1获得的允许FDP上计划额外30分钟。飞行机组成员应适应当地时间，并在计划配对的报告时间前立即有最少一个当地夜晚的休息。机长正常延长FDP的酌情权减至最多2.5小时，离开初始出发地点前行使不超过1.5小时。在任何连续28天内最多可进行4次延长FDP航班；任何连续4周内的最大执勤小时数为185小时；执行此类航班的飞行机组在连续28天内的最少休息日数为8天。不使用派遣机组。' },
-    { en:'Cabin crew: work under normal rules but must be acclimatised with at least one local night immediately before report time when operating an extended Appendix-1 flight.', zh:'当客舱机组被要求运行附件1航班以延长客舱机组FDP时，他们将按正常规则工作，但必须适应当地时间并在计划配对的报告时间前立即有最少一个当地夜晚的休息。' }
+    { key:'p1', en:'Flight crew: applies only when the planned sector is ≤7h. Adds 30 minutes to the 7.6.2.1 allowance. Crew must be acclimatised with at least one local night immediately before report time. Commander\'s normal discretion is reduced to max 2.5h (max 1.5h before leaving the initial departure point). Max 4 such extended-FDP flights in any 28 days; max cumulative duty 185h in any 4 weeks; min 8 days off in 28 days for crew using this. No dispatch crew used.', zh:'当计划航段长度不超过7小时，公司可在7.6.2.1获得的允许FDP上计划额外30分钟。飞行机组成员应适应当地时间，并在计划配对的报告时间前立即有最少一个当地夜晚的休息。机长正常延长FDP的酌情权减至最多2.5小时，离开初始出发地点前行使不超过1.5小时。在任何连续28天内最多可进行4次延长FDP航班；任何连续4周内的最大执勤小时数为185小时；执行此类航班的飞行机组在连续28天内的最少休息日数为8天。不使用派遣机组。' },
+    { key:'p2', en:'Cabin crew: work under normal rules but must be acclimatised with at least one local night immediately before report time when operating an extended Appendix-1 flight.', zh:'当客舱机组被要求运行附件1航班以延长客舱机组FDP时，他们将按正常规则工作，但必须适应当地时间并在计划配对的报告时间前立即有最少一个当地夜晚的休息。' }
   ]},
   { id:'7.B', title:'Appendix 2 — Two-Pilot Crew', title_zh:'附件2——两人制机组', paragraphs:[
-    { en:'Applies to two-pilot operations from Dubai to a nominated destination (one or two sectors) and back, where the crew is not acclimatised on departure. The return FDP must end on landing at Dubai and uses the not-acclimatised table (7.6.2.2). Sector folding: >7–9h → 2 sectors, >9–11h → 3 sectors, >11h → 4 sectors (both directions).', zh:'本附件可应用于两人制机组运行，以便从迪拜飞往指定目的地（单段或两段），正常休息后返回迪拜，出发时机组不适应当地时间。返回的FDP必须在降落迪拜时结束，最大FDP按7.6.2.2（未适应当地时间）执行。往返航班均按航段折算表折算：超过7至9小时——2段，超过9至11小时——3段，超过11小时——4段。' },
-    { en:'Conditions: a local night of rest before report time; no duty at local night while not acclimatised outstation; 2 full days completely free of duty afterward; earliest report after those 2 days is 0800 local; max 2 Appendix-2 pairings per 28 days, max 9 per 6 calendar months per pilot; max cumulative duty reduced to 180h/28 days; min 8 days off in 28 days including any day of this pairing. No dispatch crew used.', zh:'机组成员在计划配对的报告时间前应有当地夜晚的休息。在迪拜外不适应当地时间时，不得在当地夜晚执行职责。之后必须有两天完全脱离所有职责，两天休息后最早报告时间为当地时间0800。在任何连续28天内最多2个附件2配对，在任何连续6个日历月内每名飞行员最多9次此类运行。执行此类航班的飞行机组在任何连续28天内的最大执勤小时数减至180小时；机组在连续28天内的最少休息日数为8天，包括构成此配对的任何一天。不使用派遣机组。' }
+    { key:'p1', en:'Applies to two-pilot operations from Dubai to a nominated destination (one or two sectors) and back, where the crew is not acclimatised on departure. The return FDP must end on landing at Dubai and uses the not-acclimatised table (7.6.2.2). Sector folding: >7–9h → 2 sectors, >9–11h → 3 sectors, >11h → 4 sectors (both directions).', zh:'本附件可应用于两人制机组运行，以便从迪拜飞往指定目的地（单段或两段），正常休息后返回迪拜，出发时机组不适应当地时间。返回的FDP必须在降落迪拜时结束，最大FDP按7.6.2.2（未适应当地时间）执行。往返航班均按航段折算表折算：超过7至9小时——2段，超过9至11小时——3段，超过11小时——4段。' },
+    { key:'p2', en:'Conditions: a local night of rest before report time; no duty at local night while not acclimatised outstation; 2 full days completely free of duty afterward; earliest report after those 2 days is 0800 local; max 2 Appendix-2 pairings per 28 days, max 9 per 6 calendar months per pilot; max cumulative duty reduced to 180h/28 days; min 8 days off in 28 days including any day of this pairing. No dispatch crew used.', zh:'机组成员在计划配对的报告时间前应有当地夜晚的休息。在迪拜外不适应当地时间时，不得在当地夜晚执行职责。之后必须有两天完全脱离所有职责，两天休息后最早报告时间为当地时间0800。在任何连续28天内最多2个附件2配对，在任何连续6个日历月内每名飞行员最多9次此类运行。执行此类航班的飞行机组在任何连续28天内的最大执勤小时数减至180小时；机组在连续28天内的最少休息日数为8天，包括构成此配对的任何一天。不使用派遣机组。' }
   ]},
   { id:'7.C', title:'Appendix 3 — Outstation Recovery', title_zh:'附件3——外站恢复', paragraphs:[
-    { en:'Used only for genuine operational disruption, with prior DSVP-FO (or delegate) approval. Applies to two-pilot single/double-sector return-to-Dubai flights over 7h, ending on landing at Dubai.', zh:'此附件仅应在发生运行中断的异常情况下使用。每次应用此附件前需获得DSVP-FO或其指定人员的批准。此附件适用于两人制机组的单段或双段返回迪拜运行，计划航段长度超过7小时，且机组的FDP必须在降落迪拜时结束。' },
-    { en:'If acclimatised: 7.6.2.1 allowance +60 min (except when part of the duty falls 0200–0559 local acclimatised time); discretion capped at 2h; no split-duty extension; max cumulative duty 180h/28 days.', zh:'如果机组成员适应当地时间：7.6.2.1获得的允许FDP可延长60分钟（但当任何部分职责落在0200至0559期间时除外）；机长正常延长FDP的酌情权减至最多2小时；不能通过分段执勤应用延长；使用此延长的任何连续28天期间内最大执勤小时数为180小时。' },
-    { en:'If not acclimatised: 7.6.2.2 allowance extended to 11:00; outstation pre-flight rest includes ≥6h free of duty within 2200–0800 local; discretion capped at 2h; no split-duty extension.', zh:'如果机组成员不适应当地时间：7.6.2.2获得的允许FDP可延长至11:00；外站飞行前休息包括在机组所在时区2200至0800期间至少6小时脱离职责；机长正常延长FDP的酌情权减至最多2小时；不能通过分段执勤应用延长。' },
-    { en:'A day off must follow immediately. Used at most once per 28 days. Must be reported to the authority within 2 working days. Cannot be combined with any other appendix.', zh:'延长FDP后应立即给予一天休息日。此附件在任何连续28天内最多应用一次。所有此附件的应用应在应用后2个工作日内向当局报告。附件3不得与任何其他附件组合使用。' }
+    { key:'p1', en:'Used only for genuine operational disruption, with prior DSVP-FO (or delegate) approval. Applies to two-pilot single/double-sector return-to-Dubai flights over 7h, ending on landing at Dubai.', zh:'此附件仅应在发生运行中断的异常情况下使用。每次应用此附件前需获得DSVP-FO或其指定人员的批准。此附件适用于两人制机组的单段或双段返回迪拜运行，计划航段长度超过7小时，且机组的FDP必须在降落迪拜时结束。' },
+    { key:'p2', en:'If acclimatised: 7.6.2.1 allowance +60 min (except when part of the duty falls 0200–0559 local acclimatised time); discretion capped at 2h; no split-duty extension; max cumulative duty 180h/28 days.', zh:'如果机组成员适应当地时间：7.6.2.1获得的允许FDP可延长60分钟（但当任何部分职责落在0200至0559期间时除外）；机长正常延长FDP的酌情权减至最多2小时；不能通过分段执勤应用延长；使用此延长的任何连续28天期间内最大执勤小时数为180小时。' },
+    { key:'p3', en:'If not acclimatised: 7.6.2.2 allowance extended to 11:00; outstation pre-flight rest includes ≥6h free of duty within 2200–0800 local; discretion capped at 2h; no split-duty extension.', zh:'如果机组成员不适应当地时间：7.6.2.2获得的允许FDP可延长至11:00；外站飞行前休息包括在机组所在时区2200至0800期间至少6小时脱离职责；机长正常延长FDP的酌情权减至最多2小时；不能通过分段执勤应用延长。' },
+    { key:'p4', en:'A day off must follow immediately. Used at most once per 28 days. Must be reported to the authority within 2 working days. Cannot be combined with any other appendix.', zh:'延长FDP后应立即给予一天休息日。此附件在任何连续28天内最多应用一次。所有此附件的应用应在应用后2个工作日内向当局报告。附件3不得与任何其他附件组合使用。' }
   ]},
   { id:'7.D', title:'Appendix 4 — FDP +60 Minutes', title_zh:'附件4——FDP加60分钟', paragraphs:[
-    { en:'Flight crew: extends the 7.6.2.1 allowance by 60 minutes; sectors up to 7.5h need not be treated as multi-sector. Requires a day off before the extended FDP; crew must be acclimatised; commander\'s discretion reduced to max 2h (max 1h before leaving initial departure). Day off required immediately after. Max 3 such flights per 28 days; max cumulative duty 180h/28 days; min 9 days off in any 4 consecutive weeks using this. No dispatch crew; no split-duty extension.', zh:'7.6.2.1获得的允许FDP可延长60分钟，航段在计划超过7½小时前无需被视为多段飞行。延长飞行执勤期前必须获得一天休息日；飞行机组成员必须适应当地时间；机长正常延长FDP的酌情权减至最多2小时，离开初始出发地点前行使不超过1小时；延长FDP后必须获得一天休息日。在任何连续28天内最多可进行3次延长FDP航班；使用此延长的任何连续28天期间内最大执勤小时数为180小时；执行此类航班的飞行机组在使用此延长的任何4个连续周期间内的最少休息日数为9天。不得使用派遣机组；不允许通过分段执勤延长FDP。' },
-    { en:'Cabin crew: +60 min on normal allowance. Must finish duty by 22:00 local the day before, to get a full previous-duty-equivalent rest or minimum 11h (no discretion to shorten). Must be acclimatised. Max 4 per 28 days; day off required after; max cumulative duty 205h/28 days; min 8 days off in any 4 consecutive weeks.', zh:'客舱机组可在其正常允许FDP上计划额外60分钟。客舱机组成员必须在延长FDP前一天的当地时间22:00前结束职责，以获得相当于前一执勤期或最少11小时休息的休息期，且不得行使缩短该航班前后休息的酌情权。客舱机组成员必须适应当地时间。在任何连续28天内最多可进行4次延长FDP航班；延长FDP后必须获得一天休息日；使用此延长的任何连续28天期间内最大执勤小时数为205小时；执行此类航班的客舱机组在使用此延长的任何4个连续周期间内的最少休息日数为8天。' }
+    { key:'p1', en:'Flight crew: extends the 7.6.2.1 allowance by 60 minutes; sectors up to 7.5h need not be treated as multi-sector. Requires a day off before the extended FDP; crew must be acclimatised; commander\'s discretion reduced to max 2h (max 1h before leaving initial departure). Day off required immediately after. Max 3 such flights per 28 days; max cumulative duty 180h/28 days; min 9 days off in any 4 consecutive weeks using this. No dispatch crew; no split-duty extension.', zh:'7.6.2.1获得的允许FDP可延长60分钟，航段在计划超过7½小时前无需被视为多段飞行。延长飞行执勤期前必须获得一天休息日；飞行机组成员必须适应当地时间；机长正常延长FDP的酌情权减至最多2小时，离开初始出发地点前行使不超过1小时；延长FDP后必须获得一天休息日。在任何连续28天内最多可进行3次延长FDP航班；使用此延长的任何连续28天期间内最大执勤小时数为180小时；执行此类航班的飞行机组在使用此延长的任何4个连续周期间内的最少休息日数为9天。不得使用派遣机组；不允许通过分段执勤延长FDP。' },
+    { key:'p2', en:'Cabin crew: +60 min on normal allowance. Must finish duty by 22:00 local the day before, to get a full previous-duty-equivalent rest or minimum 11h (no discretion to shorten). Must be acclimatised. Max 4 per 28 days; day off required after; max cumulative duty 205h/28 days; min 8 days off in any 4 consecutive weeks.', zh:'客舱机组可在其正常允许FDP上计划额外60分钟。客舱机组成员必须在延长FDP前一天的当地时间22:00前结束职责，以获得相当于前一执勤期或最少11小时休息的休息期，且不得行使缩短该航班前后休息的酌情权。客舱机组成员必须适应当地时间。在任何连续28天内最多可进行4次延长FDP航班；延长FDP后必须获得一天休息日；使用此延长的任何连续28天期间内最大执勤小时数为205小时；执行此类航班的客舱机组在使用此延长的任何4个连续周期间内的最少休息日数为8天。' }
   ]},
   { id:'7.E', title:'Appendix 5 — Long Range Variation (LRV)', title_zh:'附件5——远程航线变更（LRV）', paragraphs:[
-    { en:'LRV is augmented long-range operation covering specific city pairs, planned flight time over 14 hours. Segments: S1 (block ≤16h), S2 (block >16h) — both normally 4-pilot (2CA+2FO). Exception: New York JFK 201/202 is 3-pilot (1CA+2FO).', zh:'LRV是计划飞行时间超过14小时的增补远程运行。航段分类：S1（计划轮挡时间≤16小时）、S2（计划轮挡时间>16小时），通常均为4人制（2CA+2FO）。例外：JFK 201/202为3人制（1CA+2FO）。' },
-    { en:'Cabin crew standard complement: A380 4-class 24, A380 3-class 23, A380 2-class 21, B777-300 3-class 14, B777-200 2-class 12.', zh:'标准客舱机组配置：A380 4舱24人、A380 3舱23人、A380 2舱21人、B777-300 3舱14人、B777-200 2舱12人。' },
-    { en:'Reporting time (7.E.2.a): flight crew base 1h25m, outstation 1h15m; cabin crew base 1h30m, outstation 1h15m. (Note: LRV\'s outstation offset of 1h15m differs from the standard scheme\'s 1h05m.)', zh:'报告时间：飞行机组（基地）STD前1小时25分钟，飞行机组（外站）STD前1小时15分钟；客舱机组（基地）STD前1小时30分钟，客舱机组（外站）STD前1小时15分钟。注意：LRV的外站offset是1小时15分钟，跟标准方案的1小时05分钟不一样。' },
-    { en:'Pre-LRV rest (7.E.2.b): S1 — all crew must be acclimatised before the LRV flight or LRVS. S2 — all crew must be acclimatised AND have 54 hours free of duty (including 3 local nights) before the LRV flight or LRVS.', zh:'对于从迪拜飞往S1目的地的航班，所有机组人员在LRV航班或远程航线变更待命（LRVS）前应适应当地时间。对于飞往S2目的地的航班，所有机组人员应适应当地时间，并在LRV航班或LRVS前有54小时脱离职责（含3个当地夜晚的休息）。' },
-    { en:'Minimum rest at outstation (7.E.2.c): S1 — greater of the preceding duty period or 16h. S2 — greater of the preceding duty period or 20h.', zh:'所有机组人员在外站的最小休息：S1目的地——至少与前一执勤期一样长，或16小时（取较大者）。S2目的地——至少与前一执勤期一样长，或20小时（取较大者）。' },
-    { en:'Minimum post-flight rest at base (7.E.2.d): 34h (2 local nights) if followed by a non-LRV pairing; 54h (3 local nights) if followed by another LRV pairing.', zh:'所有机组人员在基地的最小飞行后休息：如果后续为非远程航线变更配对——34小时脱离职责（含2个当地夜晚的休息）。如果后续为另一个远程航线变更配对——54小时脱离职责（含3个当地夜晚的休息）。' },
-    { en:'Eastward-westward / westward-eastward transition (7.E.2.e), for pairings crossing 4+ time zones both ways from base: ≥78h free of duty (4 local nights) if preceded/followed by another LRV flight; ≥54h (3 local nights) if preceded/followed by a non-LRV flight.', zh:'东西/西东交替限制适用于任何从基地出发、在两个方向上都跨越4个以上时区的配对。如果前后有另一个远程航线变更飞行——交替轮换之间至少78小时脱离所有职责，含4个当地夜晚的休息。如果前后有非远程航线变更飞行——交替轮换之间至少54小时脱离所有职责，含3个当地夜晚的休息。' },
-    { en:'Maximum FDP (7.E.5): S1 — 18h. S2 — 20h. Cabin crew FDP ex-DXB must not exceed flight crew FDP + 5 minutes.', zh:'飞往S1目的地的远程航线变更航班，FDP不得超过18小时；飞往S2目的地的航班，FDP不得超过20小时。由于报告时间的差异，从DXB出发的客舱机组FDP不得超过飞行机组FDP加5分钟。' },
-    { en:'Unforeseen circumstances after report (7.E.7): 3-pilot crew — FDP may never be extended beyond 18h. 4-pilot crew — up to 22h, if: in Dubai the projected delay is ≤4h, or at an outstation, subject to a quiet/comfortable/climate-controlled rest space before boarding (or the aircraft itself if passengers are not aboard). Even where these conditions cannot be met during a rolling delay, the extension to 22h may still be applied but must be recorded and reported to the GCAA. The commander may decline or limit the extension if it risks severe fatigue.', zh:'3人制机组运行：不允许将FDP延长至18小时以上。4人制机组运行：在迪拜，如预计延误不超过4小时，或在外站，可在提供安静舒适、有空调、不公开的地方（登机后如乘客不在机上飞机本身也可作为安静舒适的地方）等条件下行使最多22小时的特别延长。在滚动延误情况下即使无法满足上述规定，仍可应用延长至22小时，但须记录并报告GCAA。如果机长认为可能导致严重疲劳，可拒绝延长或限制其长度。' },
-    { en:'Other unforeseen circumstances (7.E.8): FDP may never exceed 18h (3-pilot) or 22h (4-pilot) except via a special DSVP-FO waiver reported to the GCAA. At an outstation, a 4-pilot crew may be revised to 1 captain + 3 F/Os with DSVP-FO approval. Cabin crew may be reduced by 1 (departing Dubai) or 2 (arriving Dubai / departing outstation), further reduction needs DSVP-SD approval and GCAA notification. LRV flights are single-sector only unless operational limits require an en-route stop. E-W/W-E transition rest may be reduced to 54h (3 nights) except between two S2 LRV flights.', zh:'机长不得将FDP延长至3人制机组18小时或4人制机组22小时的限制之外，但在特殊运行情况下，DSVP-FO或其指定人员可在评估后授权豁免，并向GCAA提交正式通知。在外站进行4人制机组运行，远程航线变更的飞行机组可经DSVP-FO批准改为1名机长和3名副驾。客舱机组配置可减少：从迪拜出发的航班减少1人，飞往迪拜/从外站出发的航班减少2人，进一步减少需经DSVP-SD批准并向GCAA提交正式通知。远程航线变更航班只能计划为单航段，除非运行限制要求在运行日途中降落。东西或西东交替的休息期可缩短至54小时（含基地3个当地夜晚的休息），但在两个飞往S2目的地的远程航线变更航班之间除外。' },
-    { en:'4-pilot-to-3-pilot due to sickness (7.E.8.f), inbound to Dubai only: another captain becomes the designated commander if the scheduled one falls sick; no 3-pilot augmented training may be planned during the transition; continue only if the commander is confident the remaining crew are adequately rested; do not dispatch with a system fault raising approach/landing workload; the resulting flight is capped at FDP 18h / flight time 15h; diversion continuation is a commander judgement call factoring total duty, alertness, diversion difficulty and support available.', zh:'对于计划配备4名飞行机组的航班，当飞行机组因病在短时间内缺勤，将影响飞往迪拜的远程航线变更航班航段离港时，机长可选择仅以3名飞行机组完成航班，条件如下：如果计划机长在起飞前生病，另一名机长应成为指定机长；转换课程期间不得计划3人制增补运行培训；仅当机长确信剩余飞行机组在飞行前得到充分休息，能够应对增加的工作负荷时，才应继续飞行；不允许使用带有会影响剩余飞行机组在进近和着陆期间工作负荷的飞机系统故障的飞机放行；仅以3名飞行机组运行的任何航班，FDP不得超过18小时，飞行时间不得超过15小时；如果飞行途中备降或需要技术经停，机长在与机组协商后决定是否继续，应考虑总执勤期、机组警觉状态、备降后运行困难、重新派遣的支持水平。' },
-    { en:'Rostering (7.E.10): a non-acclimatised crew member returning from leave needs 3 local nights in Dubai before being assigned an LRVS starting after 0600 local. Max 4 sectors per pairing; max 3 LRV pairings per calendar month; 3-pilot LRV flights capped at 18h FDP; at least 4 local nights between two consecutive LRV pairings if either includes an S2 flight.', zh:'在计划目的上，假设机组人员休假返回后不适应当地时间，需要在迪拜度过3个当地夜晚后方可被分配在当地时间06:00后开始的远程航线变更待命期。单次配对内的飞行航段数计划限制为最多4段；在任何日历月内最多可授予或分配3个LRV配对；仅以3名飞行机组运行的任何航班，FDP不得超过18小时；两个连续LRV配对（含飞往S2目的地的航班）之间应安排至少4个当地夜晚的休息。' },
-    { en:'LRVS — Long Range Variation Standby (7.E.11): protects LRV departures from Dubai. S1-bound crew may be assigned LRVS the day before; prior duty is allowed if the crew stays acclimatised and does not report before 0800 or finish after 2200 Dubai local. LRVS crew assigned to S1 may be reassigned to other duty if no other suitable crew is available and the flight risks delay/cancellation, and the reassignment keeps them acclimatised and runs 0800–2200. S2-bound crew may also be assigned LRVS the day before; reassignment requires the substitute duty to satisfy either 7.E.2(b) (if it\'s another LRV) or the general Chapter 7 rules (if not). At least 2 days off after leave before LRVS assignment, unless the crew member confirms they are acclimatised and rested.', zh:'远程航线变更待命（LRVS）排班分配是为了保障从迪拜出发的远程航线变更运行。所有计划执行飞往S1目的地的LRV航班的机组人员可在航班前一天被分配LRVS，机组人员可在待命前排班执勤，前提是保持适应当地时间，且不得安排在迪拜当地时间08:00前报到或22:00后结束的飞行任务。LRVS分配后接飞往S1目的地的LRV航班，在运行需要时可用于计划远程航线变更配对以外的职责，条件是没有其他合适的待命或休息日可用机组且航班面临延误或取消风险，并且航班不会使机组不适应当地时间且在08:00-22:00之间运行。所有计划执行飞往S2目的地的LRV航班的机组人员同样可在航班前一天被分配LRVS；LRVS分配后接飞往S2目的地的LRV航班，可用于LRV航班以外的职责，前提是下一个分配的航班如果是LRV航班则满足7.E.2(b)所述条件，如果是非LRV航班则满足OM-A第七章所述条件。休假后和分配LRVS前，应至少安排2天休息日以促进时差适应，除非机组人员确认已适应时差并休息好。' }
+    { key:'p1', en:'LRV is augmented long-range operation covering specific city pairs, planned flight time over 14 hours. Segments: S1 (block ≤16h), S2 (block >16h) — both normally 4-pilot (2CA+2FO). Exception: New York JFK 201/202 is 3-pilot (1CA+2FO).', zh:'LRV是计划飞行时间超过14小时的增补远程运行。航段分类：S1（计划轮挡时间≤16小时）、S2（计划轮挡时间>16小时），通常均为4人制（2CA+2FO）。例外：JFK 201/202为3人制（1CA+2FO）。' },
+    { key:'p2', en:'Cabin crew standard complement: A380 4-class 24, A380 3-class 23, A380 2-class 21, B777-300 3-class 14, B777-200 2-class 12.', zh:'标准客舱机组配置：A380 4舱24人、A380 3舱23人、A380 2舱21人、B777-300 3舱14人、B777-200 2舱12人。' },
+    { key:'p3', en:'Reporting time (7.E.2.a): flight crew base 1h25m, outstation 1h15m; cabin crew base 1h30m, outstation 1h15m. (Note: LRV\'s outstation offset of 1h15m differs from the standard scheme\'s 1h05m.)', zh:'报告时间：飞行机组（基地）STD前1小时25分钟，飞行机组（外站）STD前1小时15分钟；客舱机组（基地）STD前1小时30分钟，客舱机组（外站）STD前1小时15分钟。注意：LRV的外站offset是1小时15分钟，跟标准方案的1小时05分钟不一样。' },
+    { key:'p4', en:'Pre-LRV rest (7.E.2.b): S1 — all crew must be acclimatised before the LRV flight or LRVS. S2 — all crew must be acclimatised AND have 54 hours free of duty (including 3 local nights) before the LRV flight or LRVS.', zh:'对于从迪拜飞往S1目的地的航班，所有机组人员在LRV航班或远程航线变更待命（LRVS）前应适应当地时间。对于飞往S2目的地的航班，所有机组人员应适应当地时间，并在LRV航班或LRVS前有54小时脱离职责（含3个当地夜晚的休息）。' },
+    { key:'p5', en:'Minimum rest at outstation (7.E.2.c): S1 — greater of the preceding duty period or 16h. S2 — greater of the preceding duty period or 20h.', zh:'所有机组人员在外站的最小休息：S1目的地——至少与前一执勤期一样长，或16小时（取较大者）。S2目的地——至少与前一执勤期一样长，或20小时（取较大者）。' },
+    { key:'p6', en:'Minimum post-flight rest at base (7.E.2.d): 34h (2 local nights) if followed by a non-LRV pairing; 54h (3 local nights) if followed by another LRV pairing.', zh:'所有机组人员在基地的最小飞行后休息：如果后续为非远程航线变更配对——34小时脱离职责（含2个当地夜晚的休息）。如果后续为另一个远程航线变更配对——54小时脱离职责（含3个当地夜晚的休息）。' },
+    { key:'p7', en:'Eastward-westward / westward-eastward transition (7.E.2.e), for pairings crossing 4+ time zones both ways from base: ≥78h free of duty (4 local nights) if preceded/followed by another LRV flight; ≥54h (3 local nights) if preceded/followed by a non-LRV flight.', zh:'东西/西东交替限制适用于任何从基地出发、在两个方向上都跨越4个以上时区的配对。如果前后有另一个远程航线变更飞行——交替轮换之间至少78小时脱离所有职责，含4个当地夜晚的休息。如果前后有非远程航线变更飞行——交替轮换之间至少54小时脱离所有职责，含3个当地夜晚的休息。' },
+    { key:'p8', en:'Maximum FDP (7.E.5): S1 — 18h. S2 — 20h. Cabin crew FDP ex-DXB must not exceed flight crew FDP + 5 minutes.', zh:'飞往S1目的地的远程航线变更航班，FDP不得超过18小时；飞往S2目的地的航班，FDP不得超过20小时。由于报告时间的差异，从DXB出发的客舱机组FDP不得超过飞行机组FDP加5分钟。' },
+    { key:'p9', en:'Unforeseen circumstances after report (7.E.7): 3-pilot crew — FDP may never be extended beyond 18h. 4-pilot crew — up to 22h, if: in Dubai the projected delay is ≤4h, or at an outstation, subject to a quiet/comfortable/climate-controlled rest space before boarding (or the aircraft itself if passengers are not aboard). Even where these conditions cannot be met during a rolling delay, the extension to 22h may still be applied but must be recorded and reported to the GCAA. The commander may decline or limit the extension if it risks severe fatigue.', zh:'3人制机组运行：不允许将FDP延长至18小时以上。4人制机组运行：在迪拜，如预计延误不超过4小时，或在外站，可在提供安静舒适、有空调、不公开的地方（登机后如乘客不在机上飞机本身也可作为安静舒适的地方）等条件下行使最多22小时的特别延长。在滚动延误情况下即使无法满足上述规定，仍可应用延长至22小时，但须记录并报告GCAA。如果机长认为可能导致严重疲劳，可拒绝延长或限制其长度。' },
+    { key:'p10', en:'Other unforeseen circumstances (7.E.8): FDP may never exceed 18h (3-pilot) or 22h (4-pilot) except via a special DSVP-FO waiver reported to the GCAA. At an outstation, a 4-pilot crew may be revised to 1 captain + 3 F/Os with DSVP-FO approval. Cabin crew may be reduced by 1 (departing Dubai) or 2 (arriving Dubai / departing outstation), further reduction needs DSVP-SD approval and GCAA notification. LRV flights are single-sector only unless operational limits require an en-route stop. E-W/W-E transition rest may be reduced to 54h (3 nights) except between two S2 LRV flights.', zh:'机长不得将FDP延长至3人制机组18小时或4人制机组22小时的限制之外，但在特殊运行情况下，DSVP-FO或其指定人员可在评估后授权豁免，并向GCAA提交正式通知。在外站进行4人制机组运行，远程航线变更的飞行机组可经DSVP-FO批准改为1名机长和3名副驾。客舱机组配置可减少：从迪拜出发的航班减少1人，飞往迪拜/从外站出发的航班减少2人，进一步减少需经DSVP-SD批准并向GCAA提交正式通知。远程航线变更航班只能计划为单航段，除非运行限制要求在运行日途中降落。东西或西东交替的休息期可缩短至54小时（含基地3个当地夜晚的休息），但在两个飞往S2目的地的远程航线变更航班之间除外。' },
+    { key:'p11', en:'4-pilot-to-3-pilot due to sickness (7.E.8.f), inbound to Dubai only: another captain becomes the designated commander if the scheduled one falls sick; no 3-pilot augmented training may be planned during the transition; continue only if the commander is confident the remaining crew are adequately rested; do not dispatch with a system fault raising approach/landing workload; the resulting flight is capped at FDP 18h / flight time 15h; diversion continuation is a commander judgement call factoring total duty, alertness, diversion difficulty and support available.', zh:'对于计划配备4名飞行机组的航班，当飞行机组因病在短时间内缺勤，将影响飞往迪拜的远程航线变更航班航段离港时，机长可选择仅以3名飞行机组完成航班，条件如下：如果计划机长在起飞前生病，另一名机长应成为指定机长；转换课程期间不得计划3人制增补运行培训；仅当机长确信剩余飞行机组在飞行前得到充分休息，能够应对增加的工作负荷时，才应继续飞行；不允许使用带有会影响剩余飞行机组在进近和着陆期间工作负荷的飞机系统故障的飞机放行；仅以3名飞行机组运行的任何航班，FDP不得超过18小时，飞行时间不得超过15小时；如果飞行途中备降或需要技术经停，机长在与机组协商后决定是否继续，应考虑总执勤期、机组警觉状态、备降后运行困难、重新派遣的支持水平。' },
+    { key:'p12', en:'Rostering (7.E.10): a non-acclimatised crew member returning from leave needs 3 local nights in Dubai before being assigned an LRVS starting after 0600 local. Max 4 sectors per pairing; max 3 LRV pairings per calendar month; 3-pilot LRV flights capped at 18h FDP; at least 4 local nights between two consecutive LRV pairings if either includes an S2 flight.', zh:'在计划目的上，假设机组人员休假返回后不适应当地时间，需要在迪拜度过3个当地夜晚后方可被分配在当地时间06:00后开始的远程航线变更待命期。单次配对内的飞行航段数计划限制为最多4段；在任何日历月内最多可授予或分配3个LRV配对；仅以3名飞行机组运行的任何航班，FDP不得超过18小时；两个连续LRV配对（含飞往S2目的地的航班）之间应安排至少4个当地夜晚的休息。' },
+    { key:'p13', en:'LRVS — Long Range Variation Standby (7.E.11): protects LRV departures from Dubai. S1-bound crew may be assigned LRVS the day before; prior duty is allowed if the crew stays acclimatised and does not report before 0800 or finish after 2200 Dubai local. LRVS crew assigned to S1 may be reassigned to other duty if no other suitable crew is available and the flight risks delay/cancellation, and the reassignment keeps them acclimatised and runs 0800–2200. S2-bound crew may also be assigned LRVS the day before; reassignment requires the substitute duty to satisfy either 7.E.2(b) (if it\'s another LRV) or the general Chapter 7 rules (if not). At least 2 days off after leave before LRVS assignment, unless the crew member confirms they are acclimatised and rested.', zh:'远程航线变更待命（LRVS）排班分配是为了保障从迪拜出发的远程航线变更运行。所有计划执行飞往S1目的地的LRV航班的机组人员可在航班前一天被分配LRVS，机组人员可在待命前排班执勤，前提是保持适应当地时间，且不得安排在迪拜当地时间08:00前报到或22:00后结束的飞行任务。LRVS分配后接飞往S1目的地的LRV航班，在运行需要时可用于计划远程航线变更配对以外的职责，条件是没有其他合适的待命或休息日可用机组且航班面临延误或取消风险，并且航班不会使机组不适应当地时间且在08:00-22:00之间运行。所有计划执行飞往S2目的地的LRV航班的机组人员同样可在航班前一天被分配LRVS；LRVS分配后接飞往S2目的地的LRV航班，可用于LRV航班以外的职责，前提是下一个分配的航班如果是LRV航班则满足7.E.2(b)所述条件，如果是非LRV航班则满足OM-A第七章所述条件。休假后和分配LRVS前，应至少安排2天休息日以促进时差适应，除非机组人员确认已适应时差并休息好。' }
   ]}
 ];
 
 // ================= ANNOTATION LOGIC =================
 var currentUserId = null;
-var annotationCache = {}; // key: sectionId|paraIdx -> {color, note}
+var annotationCache = {}; // key: sectionId|paraKey -> {color, note, bookmarked}
+var HIGHLIGHT_COLORS = [
+  {name:'yellow', hex:'#ffe066'}, {name:'green', hex:'#5cffb1'}, {name:'blue', hex:'#6ab8ff'},
+  {name:'pink', hex:'#ff85c1'}, {name:'orange', hex:'#ffa35c'}, {name:'purple', hex:'#c48bff'}
+];
 
-function annoKey(sectionId, paraIdx){ return sectionId + '|' + paraIdx; }
+function annoKey(sectionId, paraKey){ return sectionId + '|' + paraKey; }
 
 async function loadAnnotations(){
   if(!currentUserId) return;
@@ -251,33 +258,92 @@ async function loadAnnotations(){
   if(r.error){ console.error(r.error); return; }
   annotationCache = {};
   (r.data||[]).forEach(function(row){
-    annotationCache[annoKey(row.section_id, row.para_index)] = { color: row.color, note: row.note, bookmarked: !!row.bookmarked };
+    var pk = row.para_key || ('p' + (row.para_index!=null ? row.para_index+1 : '0')); // fallback for old rows
+    annotationCache[annoKey(row.section_id, pk)] = { color: row.color, note: row.note, bookmarked: !!row.bookmarked };
   });
 }
 
-async function saveAnnotation(sectionId, paraIdx, color, note, bookmarked){
+async function saveAnnotation(sectionId, paraKey, color, note, bookmarked){
   if(!currentUserId) return;
-  await sb.from('manual_annotations').upsert({
-    user_id: currentUserId, section_id: sectionId, para_index: paraIdx,
-    color: color, note: note, bookmarked: !!bookmarked, updated_at: new Date().toISOString()
-  }, { onConflict: 'user_id,section_id,para_index' });
+  try{ localStorage.setItem('manual_annotations_cache', JSON.stringify(annotationCache)); }catch(e){}
+  if(!navigator.onLine) return; // will simply be out of sync until back online
+  try{
+    await sb.from('manual_annotations').upsert({
+      user_id: currentUserId, section_id: sectionId, para_key: paraKey,
+      color: color, note: note, bookmarked: !!bookmarked, updated_at: new Date().toISOString()
+    }, { onConflict: 'user_id,section_id,para_key' });
+  }catch(e){ console.error('saveAnnotation failed (offline?)', e); }
 }
 
-function setHighlight(sectionId, paraIdx, color){
-  var key = annoKey(sectionId, paraIdx);
+function setHighlight(sectionId, paraKey, color){
+  var key = annoKey(sectionId, paraKey);
   var existing = annotationCache[key] || {};
   existing.color = color;
   annotationCache[key] = existing;
-  saveAnnotation(sectionId, paraIdx, color, existing.note || null, existing.bookmarked);
+  saveAnnotation(sectionId, paraKey, color, existing.note || null, existing.bookmarked);
   renderSection(currentSectionId);
 }
 
-function setNote(sectionId, paraIdx, note){
-  var key = annoKey(sectionId, paraIdx);
+function setNote(sectionId, paraKey, note){
+  var key = annoKey(sectionId, paraKey);
   var existing = annotationCache[key] || {};
   existing.note = note;
   annotationCache[key] = existing;
-  saveAnnotation(sectionId, paraIdx, existing.color || null, note, existing.bookmarked);
+  saveAnnotation(sectionId, paraKey, existing.color || null, note, existing.bookmarked);
+}
+
+// ================= READING PREFERENCES (font size, line spacing, theme) =================
+var READER_PREFS_KEY = 'manual_reader_prefs';
+var readerPrefs = { fontSize: 14.5, lineHeight: 1.65, theme: 'dark' };
+try{ Object.assign(readerPrefs, JSON.parse(localStorage.getItem(READER_PREFS_KEY) || '{}')); }catch(e){}
+
+var THEMES = {
+  dark:   { '--bg':'#060b10', '--panel':'#0e161d', '--panel-2':'#121c24', '--line':'#1c2830', '--line-bright':'#2a3a46', '--text':'#d7e4ec', '--muted':'#6c8394' },
+  sepia:  { '--bg':'#f4ecd8', '--panel':'#ece0c4', '--panel-2':'#e4d6b4', '--line':'#d9c9a0', '--line-bright':'#c9b789', '--text':'#3a2f1c', '--muted':'#7a6a4d' },
+  light:  { '--bg':'#ffffff', '--panel':'#f6f7f9', '--panel-2':'#eef0f3', '--line':'#e2e5ea', '--line-bright':'#d1d5dc', '--text':'#1b1f24', '--muted':'#6b7280' },
+  night:  { '--bg':'#0a0e1a', '--panel':'#121729', '--panel-2':'#1a2038', '--line':'#232a45', '--line-bright':'#323a5c', '--text':'#cfd8e8', '--muted':'#7c86a8' }
+};
+
+function applyReaderPrefs(){
+  var t = THEMES[readerPrefs.theme] || THEMES.dark;
+  Object.keys(t).forEach(function(k){ document.documentElement.style.setProperty(k, t[k]); });
+  document.documentElement.style.setProperty('--reader-font-size', readerPrefs.fontSize + 'px');
+  document.documentElement.style.setProperty('--reader-line-height', readerPrefs.lineHeight);
+  try{ localStorage.setItem(READER_PREFS_KEY, JSON.stringify(readerPrefs)); }catch(e){}
+}
+
+function renderPrefsPanel(){
+  var panel = document.getElementById('prefsPanel');
+  var themeBtns = Object.keys(THEMES).map(function(k){
+    var active = readerPrefs.theme===k;
+    return '<button class="pref-theme-btn ' + (active?'active':'') + '" data-theme="' + k + '" style="background:' + THEMES[k]['--bg'] + '; border-color:' + (active?'var(--green)':'var(--line-bright)') + ';"></button>';
+  }).join('');
+  panel.innerHTML =
+    '<div style="font-size:12px; font-weight:700; color:var(--green); margin-bottom:10px;">Reading settings</div>' +
+    '<label style="font-size:11px; color:var(--muted); display:block; margin-bottom:4px;">Font size: <span id="fontSizeVal">' + readerPrefs.fontSize + 'px</span></label>' +
+    '<input type="range" id="fontSizeSlider" min="12" max="22" step="0.5" value="' + readerPrefs.fontSize + '" style="width:100%; margin-bottom:12px;">' +
+    '<label style="font-size:11px; color:var(--muted); display:block; margin-bottom:4px;">Line spacing: <span id="lineHeightVal">' + readerPrefs.lineHeight + '</span></label>' +
+    '<input type="range" id="lineHeightSlider" min="1.3" max="2.4" step="0.05" value="' + readerPrefs.lineHeight + '" style="width:100%; margin-bottom:12px;">' +
+    '<label style="font-size:11px; color:var(--muted); display:block; margin-bottom:6px;">Background theme</label>' +
+    '<div style="display:flex; gap:8px;">' + themeBtns + '</div>';
+
+  document.getElementById('fontSizeSlider').addEventListener('input', function(){
+    readerPrefs.fontSize = Number(this.value);
+    document.getElementById('fontSizeVal').textContent = readerPrefs.fontSize + 'px';
+    applyReaderPrefs();
+  });
+  document.getElementById('lineHeightSlider').addEventListener('input', function(){
+    readerPrefs.lineHeight = Number(this.value);
+    document.getElementById('lineHeightVal').textContent = readerPrefs.lineHeight;
+    applyReaderPrefs();
+  });
+  Array.prototype.forEach.call(panel.querySelectorAll('.pref-theme-btn'), function(btn){
+    btn.addEventListener('click', function(){
+      readerPrefs.theme = btn.dataset.theme;
+      applyReaderPrefs();
+      renderPrefsPanel();
+    });
+  });
 }
 
 // ================= RENDER =================
@@ -295,7 +361,7 @@ function renderSideNav(){
   });
 }
 
-function renderSection(id, scrollToIdx){
+function renderSection(id, scrollToKey){
   currentSectionId = id;
   var section = SECTIONS.find(function(s){ return s.id===id; });
   if(!section) return;
@@ -304,47 +370,64 @@ function renderSection(id, scrollToIdx){
   var main = document.getElementById('mainContent');
   var titleText = currentLang==='zh' ? (section.title_zh||section.title) : section.title;
   var html = '<div class="secid">SECTION ' + section.id + '</div><h2>' + titleText + '</h2>';
-  section.paragraphs.forEach(function(p, idx){
+  var colorBtnsHtml = HIGHLIGHT_COLORS.map(function(c){
+    return '<button style="background:' + c.hex + '" data-color="' + c.name + '" class="hl-btn" title="' + c.name + '"></button>';
+  }).join('');
+  section.paragraphs.forEach(function(p){
+    var pk = p.key;
     var text = currentLang==='zh' ? p.zh : p.en;
-    var key = annoKey(section.id, idx);
+    var key = annoKey(section.id, pk);
     var anno = annotationCache[key] || {};
     var hlClass = anno.color ? ('hl-' + anno.color) : '';
     var starOn = anno.bookmarked;
+    var domSafeId = 'p-' + section.id.replace(/\W/g,'_') + '-' + pk;
     html +=
-      '<div class="para ' + hlClass + '" data-idx="' + idx + '" id="p-' + section.id.replace(/\W/g,'_') + '-' + idx + '">' +
-        '<div class="toolbar">' +
-          '<button style="background:#ffe066" onclick="setHighlight(\'' + section.id + '\',' + idx + ',\'yellow\')" title="Yellow"></button>' +
-          '<button style="background:#5cffb1" onclick="setHighlight(\'' + section.id + '\',' + idx + ',\'green\')" title="Green"></button>' +
-          '<button style="background:#6ab8ff" onclick="setHighlight(\'' + section.id + '\',' + idx + ',\'blue\')" title="Blue"></button>' +
-          '<button style="background:#ff85c1" onclick="setHighlight(\'' + section.id + '\',' + idx + ',\'pink\')" title="Pink"></button>' +
-          '<button class="clear-btn" onclick="setHighlight(\'' + section.id + '\',' + idx + ',null)">clear</button>' +
-          '<button class="note-btn" onclick="toggleNote(\'' + section.id + '\',' + idx + ')">note</button>' +
-          '<button class="note-btn" style="color:' + (starOn?'#ffc94a':'var(--muted)') + '" onclick="toggleBookmark(\'' + section.id + '\',' + idx + ')">' + (starOn?'\u2605':'\u2606') + '</button>' +
+      '<div class="para ' + hlClass + '" data-key="' + pk + '" id="' + domSafeId + '">' +
+        '<div class="toolbar" data-section="' + section.id + '" data-key="' + pk + '">' +
+          colorBtnsHtml +
+          '<button class="clear-btn hl-clear">clear</button>' +
+          '<button class="note-btn hl-note">note</button>' +
+          '<button class="note-btn hl-star" style="color:' + (starOn?'#ffc94a':'var(--muted)') + '">' + (starOn?'\u2605':'\u2606') + '</button>' +
         '</div>' +
         text +
-        '<div class="note-box' + (anno.note ? ' show' : '') + '" id="note-' + section.id.replace(/\W/g,'_') + '-' + idx + '">' +
-          '<textarea placeholder="Your note..." onblur="setNote(\'' + section.id + '\',' + idx + ',this.value)">' + (anno.note||'') + '</textarea>' +
+        '<div class="note-box' + (anno.note ? ' show' : '') + '" id="note-' + section.id.replace(/\W/g,'_') + '-' + pk + '">' +
+          '<textarea placeholder="Your note..." data-section="' + section.id + '" data-key="' + pk + '">' + (anno.note||'') + '</textarea>' +
         '</div>' +
       '</div>';
   });
   main.innerHTML = html;
-  if(scrollToIdx!==undefined){
-    var el = document.getElementById('p-'+section.id.replace(/\W/g,'_')+'-'+scrollToIdx);
+
+  // wire up toolbar buttons (avoids fragile inline-onclick string escaping with colors/keys)
+  Array.prototype.forEach.call(main.querySelectorAll('.toolbar'), function(tb){
+    var sid = tb.dataset.section, pk = tb.dataset.key;
+    Array.prototype.forEach.call(tb.querySelectorAll('.hl-btn'), function(btn){
+      btn.addEventListener('click', function(){ setHighlight(sid, pk, btn.dataset.color); });
+    });
+    tb.querySelector('.hl-clear').addEventListener('click', function(){ setHighlight(sid, pk, null); });
+    tb.querySelector('.hl-note').addEventListener('click', function(){ toggleNote(sid, pk); });
+    tb.querySelector('.hl-star').addEventListener('click', function(){ toggleBookmark(sid, pk); });
+  });
+  Array.prototype.forEach.call(main.querySelectorAll('.note-box textarea'), function(ta){
+    ta.addEventListener('blur', function(){ setNote(ta.dataset.section, ta.dataset.key, ta.value); });
+  });
+
+  if(scrollToKey!==undefined){
+    var el = document.getElementById('p-'+section.id.replace(/\W/g,'_')+'-'+scrollToKey);
     if(el) setTimeout(function(){ el.scrollIntoView({behavior:'smooth', block:'center'}); el.style.outline='2px solid var(--green)'; setTimeout(function(){el.style.outline='';}, 1500); }, 80);
   }
 }
 
-function toggleNote(sectionId, idx){
-  var el = document.getElementById('note-' + sectionId.replace(/\W/g,'_') + '-' + idx);
+function toggleNote(sectionId, paraKey){
+  var el = document.getElementById('note-' + sectionId.replace(/\W/g,'_') + '-' + paraKey);
   if(el) el.classList.toggle('show');
 }
 
-function toggleBookmark(sectionId, idx){
-  var key = annoKey(sectionId, idx);
+function toggleBookmark(sectionId, paraKey){
+  var key = annoKey(sectionId, paraKey);
   var existing = annotationCache[key] || {};
   existing.bookmarked = !existing.bookmarked;
   annotationCache[key] = existing;
-  saveAnnotation(sectionId, idx, existing.color||null, existing.note||null, existing.bookmarked);
+  saveAnnotation(sectionId, paraKey, existing.color||null, existing.note||null, existing.bookmarked);
   renderSection(currentSectionId);
   renderBookmarksList();
 }
@@ -352,27 +435,30 @@ function toggleBookmark(sectionId, idx){
 function renderBookmarksList(){
   var list = document.getElementById('bookmarksList');
   var items = [];
-  Object.keys(annotationCache).forEach(function(key){
-    var a = annotationCache[key];
+  Object.keys(annotationCache).forEach(function(k){
+    var a = annotationCache[k];
     if(a && a.bookmarked){
-      var parts = key.split('|');
-      items.push({ sectionId: parts[0], idx: Number(parts[1]) });
+      var sep = k.indexOf('|');
+      items.push({ sectionId: k.slice(0,sep), paraKey: k.slice(sep+1) });
     }
   });
   if(items.length===0){ list.innerHTML = 'No bookmarks yet.'; return; }
   list.innerHTML = items.map(function(it){
     var section = SECTIONS.find(function(s){ return s.id===it.sectionId; });
     var label = section ? (currentLang==='zh'?(section.title_zh||section.title):section.title) : it.sectionId;
-    return '<div style="padding:6px 0; border-bottom:1px dashed var(--line-bright); cursor:pointer;" onclick="jumpToBookmark(\''+it.sectionId+'\','+it.idx+')">'+
+    return '<div class="bm-item" data-section="'+it.sectionId+'" data-key="'+it.paraKey+'" style="padding:6px 0; border-bottom:1px dashed var(--line-bright); cursor:pointer;">'+
       '<div style="color:var(--green); font-family:var(--mono); font-size:11px;">'+it.sectionId+'</div>'+
-      '<div style="font-size:11.5px;">'+label+' \u00b7 \u00a7'+(it.idx+1)+'</div>'+
+      '<div style="font-size:11.5px;">'+label+' \u00b7 '+it.paraKey+'</div>'+
     '</div>';
   }).join('');
+  Array.prototype.forEach.call(list.querySelectorAll('.bm-item'), function(el){
+    el.addEventListener('click', function(){ jumpToBookmark(el.dataset.section, el.dataset.key); });
+  });
 }
 
-function jumpToBookmark(sectionId, idx){
+function jumpToBookmark(sectionId, paraKey){
   document.getElementById('bookmarksPanel').style.display = 'none';
-  renderSection(sectionId, idx);
+  renderSection(sectionId, paraKey);
 }
 
 document.getElementById('langToggle').addEventListener('click', function(){
@@ -386,11 +472,41 @@ document.getElementById('bookmarksBtn').addEventListener('click', function(){
   var showing = panel.style.display !== 'none';
   if(!showing) renderBookmarksList();
   panel.style.display = showing ? 'none' : 'block';
+  document.getElementById('prefsPanel').style.display = 'none';
 });
+document.getElementById('prefsBtn').addEventListener('click', function(){
+  var panel = document.getElementById('prefsPanel');
+  var showing = panel.style.display !== 'none';
+  if(!showing) renderPrefsPanel();
+  panel.style.display = showing ? 'none' : 'block';
+  document.getElementById('bookmarksPanel').style.display = 'none';
+});
+applyReaderPrefs();
 
 // ================= ACCESS GATE =================
 async function checkAccess(){
   var gateEl = document.getElementById('gate');
+  var CACHE_KEY = 'gate_ok_467988';
+  var ANNO_CACHE_KEY = 'manual_annotations_cache';
+
+  function showReader(){
+    gateEl.style.display = 'none';
+    document.getElementById('readerRoot').style.display = 'flex';
+    document.getElementById('langToggle').textContent = currentLang==='zh' ? 'EN' : '\u4e2d\u6587';
+    renderSideNav();
+    renderSection(currentSectionId);
+  }
+
+  if(!navigator.onLine){
+    if(localStorage.getItem(CACHE_KEY) === '1'){
+      try{ annotationCache = JSON.parse(localStorage.getItem(ANNO_CACHE_KEY) || '{}'); }catch(e){ annotationCache = {}; }
+      showReader();
+    } else {
+      gateEl.innerHTML = '<div><h2>Offline</h2><p>Connect to the internet once to verify access \u2014 after that this page works offline too.</p></div>';
+    }
+    return;
+  }
+
   try{
     var u = await sb.auth.getUser();
     if(!u.data || !u.data.user){
@@ -400,20 +516,27 @@ async function checkAccess(){
     var uid = u.data.user.id;
     var p = await sb.from('b777_profiles').select('staff_id').eq('user_id', uid).single();
     var staffId = p.data ? p.data.staff_id : null;
-    if(staffId !== ALLOWED_STAFF_ID){
+    if(!staffId){
+      staffId = (u.data.user.user_metadata && u.data.user.user_metadata.staff_id) || null;
+    }
+    if(String(staffId) !== ALLOWED_STAFF_ID){
+      localStorage.removeItem(CACHE_KEY);
       gateEl.innerHTML = '<div><h2>Access restricted</h2><p>This page is only available to a specific admin account.</p></div>';
       return;
     }
     currentUserId = uid;
     await loadAnnotations();
-    gateEl.style.display = 'none';
-    document.getElementById('readerRoot').style.display = 'flex';
-    document.getElementById('langToggle').textContent = currentLang==='zh' ? 'EN' : '\u4e2d\u6587';
-    renderSideNav();
-    renderSection(currentSectionId);
+    try{ localStorage.setItem(ANNO_CACHE_KEY, JSON.stringify(annotationCache)); }catch(e){}
+    localStorage.setItem(CACHE_KEY, '1');
+    showReader();
   } catch(e){
     console.error(e);
-    gateEl.innerHTML = '<div><h2>Error checking access</h2><p>Please try again later.</p></div>';
+    if(localStorage.getItem(CACHE_KEY) === '1'){
+      try{ annotationCache = JSON.parse(localStorage.getItem(ANNO_CACHE_KEY) || '{}'); }catch(e2){ annotationCache = {}; }
+      showReader();
+    } else {
+      gateEl.innerHTML = '<div><h2>Error checking access</h2><p>Please try again later.</p></div>';
+    }
   }
 }
 

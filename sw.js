@@ -1,6 +1,6 @@
-const CACHE = 'b777-v48';
-const ASSETS = ['./', './index.html', './questions.js', './supabase.js', './manifest.json', './icon192.png', './icon512.png', './duty-manager.html'];
-const PAGES = ['./index.html', './duty-manager.html'];
+const CACHE = 'b777-v49';
+const ASSETS = ['./', './index.html', './questions.js', './supabase.js', './manifest.json', './icon192.png', './icon512.png', './icon-maskable.png', './duty-manager.html', './manual-reader.html'];
+const PAGES = ['./index.html', './duty-manager.html', './manual-reader.html'];
 
 self.addEventListener('install', function(e){
   e.waitUntil(caches.open(CACHE).then(function(c){ return c.addAll(ASSETS.map(function(u){ return new Request(u, {cache:'reload'}); })); }));
@@ -41,9 +41,10 @@ self.addEventListener('fetch', function(e){
   // Content self-heals within one extra load -- no manual cache clearing
   // ever required, even if the service worker version itself hasn't changed.
   var isDutyManager = url.indexOf('duty-manager.html') > -1;
-  var isPage = e.request.mode === 'navigate' || url.indexOf('index.html') > -1 || isDutyManager;
+  var isManualReader = url.indexOf('manual-reader.html') > -1;
+  var isPage = e.request.mode === 'navigate' || url.indexOf('index.html') > -1 || isDutyManager || isManualReader;
   if(isPage){
-    var targetPage = isDutyManager ? './duty-manager.html' : './index.html';
+    var targetPage = isDutyManager ? './duty-manager.html' : (isManualReader ? './manual-reader.html' : './index.html');
     e.respondWith((async function(){
       var cached = await caches.match(targetPage);
       var netPromise = fetch(e.request).then(async function(resp){
