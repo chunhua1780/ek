@@ -102,7 +102,11 @@
 </style>
 </head>
 <body>
-<div class="wrap">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<div id="accessGate" style="display:flex; align-items:center; justify-content:center; min-height:100vh; text-align:center; padding:40px; font-family:var(--sans);">
+  <div><h2 style="font-size:18px;">Checking access…</h2><p style="color:var(--muted); font-size:13px;">This page is restricted.</p></div>
+</div>
+<div class="wrap" id="pageContent" style="display:none;">
 
   <a href="./index.html" style="display:inline-flex; align-items:center; gap:4px; color:var(--muted); font-size:13px; text-decoration:none; margin-bottom:14px; font-family:var(--sans);">&lsaquo; Back to Home</a>
 
@@ -1228,6 +1232,36 @@ document.querySelectorAll('nav.tabs button').forEach(btn=>{
 });
 
 calcFDP(); calcStandby(); calcRest(); calcAcclim(); calcCumulative();
+
+// ================= ACCESS GATE =================
+(function(){
+  var SB_URL = 'https://yogiadtnqqmivpekphme.supabase.co';
+  var SB_KEY = 'sb_publishable_SSLhMPcjEbzcoIVFpjBWFA_-O3eOSUa';
+  var ALLOWED_STAFF_ID = '467988';
+  var sbGate = supabase.createClient(SB_URL, SB_KEY);
+  (async function(){
+    var gateEl = document.getElementById('accessGate');
+    var contentEl = document.getElementById('pageContent');
+    try{
+      var u = await sbGate.auth.getUser();
+      if(!u.data || !u.data.user){
+        gateEl.innerHTML = '<div><h2 style="font-size:18px;">Please sign in</h2><p style="color:var(--muted);font-size:13px;">Sign in from the Home screen first, then reopen this page.</p></div>';
+        return;
+      }
+      var p = await sbGate.from('b777_profiles').select('staff_id').eq('user_id', u.data.user.id).single();
+      var staffId = p.data ? p.data.staff_id : null;
+      if(String(staffId) !== ALLOWED_STAFF_ID){
+        gateEl.innerHTML = '<div><h2 style="font-size:18px;">Access restricted</h2><p style="color:var(--muted);font-size:13px;">This page is only available to a specific admin account.</p></div>';
+        return;
+      }
+      gateEl.style.display = 'none';
+      contentEl.style.display = 'block';
+    } catch(e){
+      console.error(e);
+      gateEl.innerHTML = '<div><h2 style="font-size:18px;">Error checking access</h2><p style="color:var(--muted);font-size:13px;">Please try again later.</p></div>';
+    }
+  })();
+})();
 </script>
 </body>
 </html>
