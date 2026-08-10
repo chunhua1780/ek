@@ -19,11 +19,20 @@
   .topbar{display:flex; align-items:center; justify-content:space-between; padding:12px 16px; border-bottom:1px solid var(--line); background:var(--panel);}
   .topbar a{color:var(--muted); text-decoration:none; font-size:13px;}
   .topbar h1{font-size:15px; margin:0; font-weight:700;}
-  .layout{display:flex; min-height:calc(100vh - 46px);}
+  .layout{display:flex; min-height:calc(100vh - 46px); position:relative;}
   nav.side{width:220px; flex-shrink:0; border-right:1px solid var(--line); background:var(--panel); padding:12px; overflow-y:auto; max-height:calc(100vh - 46px); position:sticky; top:46px;}
   nav.side button{display:block; width:100%; text-align:left; background:transparent; border:none; color:var(--muted); font-size:12.5px; padding:8px 10px; border-radius:6px; cursor:pointer; margin-bottom:2px; font-family:var(--mono);}
   nav.side button.active{background:var(--panel-2); color:var(--green); font-weight:700;}
   nav.side button:hover:not(.active){color:var(--text); background:rgba(255,255,255,0.03);}
+  #navOverlay{display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:39;}
+  #hamburgerBtn{display:none;}
+  @media (max-width:760px){
+    nav.side{position:fixed; top:0; bottom:0; left:0; height:100vh; max-height:none; z-index:40; transform:translateX(-100%); transition:transform .22s ease; box-shadow:4px 0 20px rgba(0,0,0,0.4);}
+    nav.side.open{transform:translateX(0);}
+    #navOverlay.open{display:block;}
+    #hamburgerBtn{display:inline-flex;}
+    main{padding:16px;}
+  }
   main{flex:1; padding:20px 24px; max-width:820px;}
   main h2{font-size:19px; margin:0 0 4px;}
   main .secid{font-family:var(--mono); color:var(--green); font-size:12px; letter-spacing:.05em;}
@@ -45,9 +54,13 @@
 </head>
 <body>
   <div class="topbar">
-    <a href="./index.html">&lsaquo; Back to Home</a>
+    <div style="display:flex; align-items:center; gap:10px;">
+      <button id="hamburgerBtn" style="background:var(--panel-2); border:1px solid var(--line-bright); color:var(--text); font-size:14px; padding:5px 10px; border-radius:6px; cursor:pointer;">&#9776;</button>
+      <a href="./index.html">&lsaquo; Back to Home</a>
+    </div>
     <h1>Manual Reader — Chapter 7 FTL</h1>
     <div style="display:flex; gap:6px; align-items:center;">
+      <button id="addChapterBtn" style="display:none; background:var(--panel-2); border:1px solid var(--green); color:var(--green); font-size:11px; padding:5px 10px; border-radius:6px; cursor:pointer;">+ Add Chapter</button>
       <button id="prefsBtn" style="background:var(--panel-2); border:1px solid var(--line-bright); color:var(--muted); font-size:11px; padding:5px 10px; border-radius:6px; cursor:pointer;">Aa</button>
       <button id="bookmarksBtn" style="background:var(--panel-2); border:1px solid var(--line-bright); color:var(--muted); font-size:11px; padding:5px 10px; border-radius:6px; cursor:pointer;">★ Bookmarks</button>
       <button id="langToggle" style="background:var(--panel-2); border:1px solid var(--line-bright); color:var(--green); font-size:11px; font-weight:700; padding:5px 10px; border-radius:6px; cursor:pointer;">中文</button>
@@ -63,6 +76,31 @@
   <div id="bookmarksPanel" style="display:none; position:fixed; top:50px; right:16px; width:280px; max-height:60vh; overflow-y:auto; background:var(--panel); border:1px solid var(--line-bright); border-radius:10px; padding:12px; z-index:50; box-shadow:0 10px 30px rgba(0,0,0,0.5);">
     <div style="font-size:12px; font-weight:700; color:var(--green); margin-bottom:8px;">★ Bookmarked paragraphs</div>
     <div id="bookmarksList" style="font-size:12px; color:var(--muted);">No bookmarks yet.</div>
+  </div>
+
+  <div id="navOverlay"></div>
+
+  <div id="addChapterModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:70; align-items:center; justify-content:center; padding:16px;">
+    <div style="background:var(--panel); border:1px solid var(--line-bright); border-radius:12px; padding:20px; max-width:520px; width:100%; max-height:88vh; overflow-y:auto;">
+      <div style="font-size:14px; font-weight:700; color:var(--green); margin-bottom:12px;">Add a new chapter</div>
+      <label style="font-size:11px; color:var(--muted); display:block; margin-bottom:4px;">Section key (short code, e.g. 7.23 or OM-A-4)</label>
+      <input type="text" id="acKey" placeholder="7.23" style="width:100%; margin-bottom:10px; background:var(--panel-2); border:1px solid var(--line-bright); border-radius:6px; color:var(--text); padding:8px 10px; font-family:var(--mono); font-size:13px;">
+      <label style="font-size:11px; color:var(--muted); display:block; margin-bottom:4px;">Title (English)</label>
+      <input type="text" id="acTitleEn" placeholder="e.g. New Chapter Title" style="width:100%; margin-bottom:10px; background:var(--panel-2); border:1px solid var(--line-bright); border-radius:6px; color:var(--text); padding:8px 10px; font-size:13px;">
+      <label style="font-size:11px; color:var(--muted); display:block; margin-bottom:4px;">Title (Chinese, optional)</label>
+      <input type="text" id="acTitleZh" placeholder="标题" style="width:100%; margin-bottom:10px; background:var(--panel-2); border:1px solid var(--line-bright); border-radius:6px; color:var(--text); padding:8px 10px; font-size:13px;">
+      <label style="font-size:11px; color:var(--muted); display:block; margin-bottom:4px;">English text (separate paragraphs with a blank line) — or upload a .txt file below</label>
+      <textarea id="acTextEn" rows="6" placeholder="Paste English text here..." style="width:100%; margin-bottom:6px; background:var(--panel-2); border:1px solid var(--line-bright); border-radius:6px; color:var(--text); padding:8px 10px; font-size:12.5px; font-family:var(--sans);"></textarea>
+      <input type="file" id="acFileEn" accept=".txt" style="width:100%; margin-bottom:10px; font-size:11px; color:var(--muted);">
+      <label style="font-size:11px; color:var(--muted); display:block; margin-bottom:4px;">Chinese text (optional — same number of paragraphs as English)</label>
+      <textarea id="acTextZh" rows="6" placeholder="粘贴中文文本..." style="width:100%; margin-bottom:6px; background:var(--panel-2); border:1px solid var(--line-bright); border-radius:6px; color:var(--text); padding:8px 10px; font-size:12.5px; font-family:var(--sans);"></textarea>
+      <input type="file" id="acFileZh" accept=".txt" style="width:100%; margin-bottom:14px; font-size:11px; color:var(--muted);">
+      <div id="acWarn" style="font-size:11.5px; color:var(--amber); margin-bottom:10px; display:none;"></div>
+      <div style="display:flex; gap:8px;">
+        <button id="acCancel" style="flex:1; background:var(--panel-2); border:1px solid var(--line-bright); color:var(--muted); border-radius:8px; padding:10px; cursor:pointer;">Cancel</button>
+        <button id="acSubmit" style="flex:1; background:var(--green); border:none; color:#06120c; font-weight:700; border-radius:8px; padding:10px; cursor:pointer;">Save Chapter</button>
+      </div>
+    </div>
   </div>
 
   <div id="readerRoot" class="layout">
@@ -241,6 +279,38 @@ var SECTIONS = [
     { key:'p13', en:'LRVS — Long Range Variation Standby (7.E.11): protects LRV departures from Dubai. S1-bound crew may be assigned LRVS the day before; prior duty is allowed if the crew stays acclimatised and does not report before 0800 or finish after 2200 Dubai local. LRVS crew assigned to S1 may be reassigned to other duty if no other suitable crew is available and the flight risks delay/cancellation, and the reassignment keeps them acclimatised and runs 0800–2200. S2-bound crew may also be assigned LRVS the day before; reassignment requires the substitute duty to satisfy either 7.E.2(b) (if it\'s another LRV) or the general Chapter 7 rules (if not). At least 2 days off after leave before LRVS assignment, unless the crew member confirms they are acclimatised and rested.', zh:'远程航线变更待命（LRVS）排班分配是为了保障从迪拜出发的远程航线变更运行。所有计划执行飞往S1目的地的LRV航班的机组人员可在航班前一天被分配LRVS，机组人员可在待命前排班执勤，前提是保持适应当地时间，且不得安排在迪拜当地时间08:00前报到或22:00后结束的飞行任务。LRVS分配后接飞往S1目的地的LRV航班，在运行需要时可用于计划远程航线变更配对以外的职责，条件是没有其他合适的待命或休息日可用机组且航班面临延误或取消风险，并且航班不会使机组不适应当地时间且在08:00-22:00之间运行。所有计划执行飞往S2目的地的LRV航班的机组人员同样可在航班前一天被分配LRVS；LRVS分配后接飞往S2目的地的LRV航班，可用于LRV航班以外的职责，前提是下一个分配的航班如果是LRV航班则满足7.E.2(b)所述条件，如果是非LRV航班则满足OM-A第七章所述条件。休假后和分配LRVS前，应至少安排2天休息日以促进时差适应，除非机组人员确认已适应时差并休息好。' }
   ]}
 ];
+var BUILTIN_SECTIONS = SECTIONS;
+var isAdmin = false;
+
+async function loadExtraSections(){
+  try{
+    var r = await sb.from('manual_sections').select('*').order('order_index',{ascending:true});
+    if(r.error){ console.error(r.error); return; }
+    var extra = (r.data||[]).map(function(row){
+      return {
+        id: row.section_key,
+        title: row.title_en,
+        title_zh: row.title_zh || row.title_en,
+        paragraphs: row.paragraphs || [],
+        _admin: true,
+        _dbId: row.id
+      };
+    });
+    SECTIONS = BUILTIN_SECTIONS.concat(extra);
+  }catch(e){ console.error('loadExtraSections failed', e); }
+}
+
+async function deleteSection(dbId, sectionId){
+  if(!confirm('Delete this chapter? This cannot be undone.')) return;
+  try{
+    await sb.from('manual_sections').delete().eq('id', dbId);
+    SECTIONS = SECTIONS.filter(function(s){ return s.id !== sectionId; });
+    currentSectionId = SECTIONS[0].id;
+    renderSideNav();
+    renderSection(currentSectionId);
+  }catch(e){ alert('Delete failed.'); }
+}
+
 
 // ================= ANNOTATION LOGIC =================
 var currentUserId = null;
@@ -298,15 +368,17 @@ var readerPrefs = { fontSize: 14.5, lineHeight: 1.65, theme: 'dark' };
 try{ Object.assign(readerPrefs, JSON.parse(localStorage.getItem(READER_PREFS_KEY) || '{}')); }catch(e){}
 
 var THEMES = {
-  dark:   { '--bg':'#060b10', '--panel':'#0e161d', '--panel-2':'#121c24', '--line':'#1c2830', '--line-bright':'#2a3a46', '--text':'#d7e4ec', '--muted':'#6c8394' },
-  sepia:  { '--bg':'#f4ecd8', '--panel':'#ece0c4', '--panel-2':'#e4d6b4', '--line':'#d9c9a0', '--line-bright':'#c9b789', '--text':'#3a2f1c', '--muted':'#7a6a4d' },
-  light:  { '--bg':'#ffffff', '--panel':'#f6f7f9', '--panel-2':'#eef0f3', '--line':'#e2e5ea', '--line-bright':'#d1d5dc', '--text':'#1b1f24', '--muted':'#6b7280' },
-  night:  { '--bg':'#0a0e1a', '--panel':'#121729', '--panel-2':'#1a2038', '--line':'#232a45', '--line-bright':'#323a5c', '--text':'#cfd8e8', '--muted':'#7c86a8' }
+  dark:   { label:'Dark',   '--bg':'#060b10', '--panel':'#0e161d', '--panel-2':'#121c24', '--line':'#1c2830', '--line-bright':'#2a3a46', '--text':'#d7e4ec', '--muted':'#6c8394' },
+  night:  { label:'Night Blue', '--bg':'#0a0e1a', '--panel':'#121729', '--panel-2':'#1a2038', '--line':'#232a45', '--line-bright':'#323a5c', '--text':'#cfd8e8', '--muted':'#7c86a8' },
+  sepia:  { label:'Sepia',  '--bg':'#f4ecd8', '--panel':'#ece0c4', '--panel-2':'#e4d6b4', '--line':'#d9c9a0', '--line-bright':'#c9b789', '--text':'#3a2f1c', '--muted':'#7a6a4d' },
+  paper:  { label:'Paper',  '--bg':'#f2f0ea', '--panel':'#e9e6dd', '--panel-2':'#e1ddd0', '--line':'#d6d1c1', '--line-bright':'#c5bfab', '--text':'#2c2a24', '--muted':'#6e6a5c' },
+  forest: { label:'Forest', '--bg':'#101a15', '--panel':'#16221b', '--panel-2':'#1c2b22', '--line':'#28392f', '--line-bright':'#37503f', '--text':'#d8e6dc', '--muted':'#7fa08e' },
+  light:  { label:'Light',  '--bg':'#ffffff', '--panel':'#f6f7f9', '--panel-2':'#eef0f3', '--line':'#e2e5ea', '--line-bright':'#d1d5dc', '--text':'#1b1f24', '--muted':'#6b7280' }
 };
 
 function applyReaderPrefs(){
   var t = THEMES[readerPrefs.theme] || THEMES.dark;
-  Object.keys(t).forEach(function(k){ document.documentElement.style.setProperty(k, t[k]); });
+  Object.keys(t).forEach(function(k){ if(k!=='label') document.documentElement.style.setProperty(k, t[k]); });
   document.documentElement.style.setProperty('--reader-font-size', readerPrefs.fontSize + 'px');
   document.documentElement.style.setProperty('--reader-line-height', readerPrefs.lineHeight);
   try{ localStorage.setItem(READER_PREFS_KEY, JSON.stringify(readerPrefs)); }catch(e){}
@@ -316,7 +388,7 @@ function renderPrefsPanel(){
   var panel = document.getElementById('prefsPanel');
   var themeBtns = Object.keys(THEMES).map(function(k){
     var active = readerPrefs.theme===k;
-    return '<button class="pref-theme-btn ' + (active?'active':'') + '" data-theme="' + k + '" style="background:' + THEMES[k]['--bg'] + '; border-color:' + (active?'var(--green)':'var(--line-bright)') + ';"></button>';
+    return '<button class="pref-theme-btn ' + (active?'active':'') + '" data-theme="' + k + '" style="background:' + THEMES[k]['--bg'] + '; color:' + THEMES[k]['--text'] + '; border:2px solid ' + (active?'var(--green)':'var(--line-bright)') + '; border-radius:8px; padding:8px 4px; font-size:10px; cursor:pointer;">' + THEMES[k].label + '</button>';
   }).join('');
   panel.innerHTML =
     '<div style="font-size:12px; font-weight:700; color:var(--green); margin-bottom:10px;">Reading settings</div>' +
@@ -325,7 +397,7 @@ function renderPrefsPanel(){
     '<label style="font-size:11px; color:var(--muted); display:block; margin-bottom:4px;">Line spacing: <span id="lineHeightVal">' + readerPrefs.lineHeight + '</span></label>' +
     '<input type="range" id="lineHeightSlider" min="1.3" max="2.4" step="0.05" value="' + readerPrefs.lineHeight + '" style="width:100%; margin-bottom:12px;">' +
     '<label style="font-size:11px; color:var(--muted); display:block; margin-bottom:6px;">Background theme</label>' +
-    '<div style="display:flex; gap:8px;">' + themeBtns + '</div>';
+    '<div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:6px;">' + themeBtns + '</div>';
 
   document.getElementById('fontSizeSlider').addEventListener('input', function(){
     readerPrefs.fontSize = Number(this.value);
@@ -357,7 +429,7 @@ function renderSideNav(){
     return '<button data-id="'+s.id+'" class="'+(s.id===currentSectionId?'active':'')+'">'+label+'</button>';
   }).join('');
   Array.prototype.forEach.call(nav.querySelectorAll('button'), function(btn){
-    btn.addEventListener('click', function(){ renderSection(btn.dataset.id); });
+    btn.addEventListener('click', function(){ renderSection(btn.dataset.id); if(window.innerWidth<=760) closeNav(); });
   });
 }
 
@@ -369,7 +441,8 @@ function renderSection(id, scrollToKey){
 
   var main = document.getElementById('mainContent');
   var titleText = currentLang==='zh' ? (section.title_zh||section.title) : section.title;
-  var html = '<div class="secid">SECTION ' + section.id + '</div><h2>' + titleText + '</h2>';
+  var deleteBtnHtml = section._admin ? ('<button id="deleteSectionBtn" style="float:right; background:transparent; border:1px solid var(--red); color:var(--red); font-size:11px; padding:4px 10px; border-radius:6px; cursor:pointer;">Delete chapter</button>') : '';
+  var html = '<div class="secid">SECTION ' + section.id + (section._admin?' \u00b7 admin-added':'') + '</div>' + deleteBtnHtml + '<h2>' + titleText + '</h2>';
   var colorBtnsHtml = HIGHLIGHT_COLORS.map(function(c){
     return '<button style="background:' + c.hex + '" data-color="' + c.name + '" class="hl-btn" title="' + c.name + '"></button>';
   }).join('');
@@ -396,6 +469,8 @@ function renderSection(id, scrollToKey){
       '</div>';
   });
   main.innerHTML = html;
+  var delBtn = document.getElementById('deleteSectionBtn');
+  if(delBtn) delBtn.addEventListener('click', function(){ deleteSection(section._dbId, section.id); });
 
   // wire up toolbar buttons (avoids fragile inline-onclick string escaping with colors/keys)
   Array.prototype.forEach.call(main.querySelectorAll('.toolbar'), function(tb){
@@ -467,6 +542,79 @@ document.getElementById('langToggle').addEventListener('click', function(){
   renderSideNav();
   renderSection(currentSectionId);
 });
+document.getElementById('addChapterBtn').addEventListener('click', function(){
+  document.getElementById('addChapterModal').style.display = 'flex';
+});
+document.getElementById('acCancel').addEventListener('click', function(){
+  document.getElementById('addChapterModal').style.display = 'none';
+});
+function readTextFile(fileInput, textarea){
+  fileInput.addEventListener('change', function(){
+    var f = fileInput.files[0];
+    if(!f) return;
+    var reader = new FileReader();
+    reader.onload = function(e){ textarea.value = e.target.result; };
+    reader.readAsText(f, 'UTF-8');
+  });
+}
+readTextFile(document.getElementById('acFileEn'), document.getElementById('acTextEn'));
+readTextFile(document.getElementById('acFileZh'), document.getElementById('acTextZh'));
+
+function splitParagraphs(text){
+  return text.split(/\n\s*\n/).map(function(p){ return p.trim(); }).filter(function(p){ return p.length>0; });
+}
+
+document.getElementById('acSubmit').addEventListener('click', async function(){
+  var warnEl = document.getElementById('acWarn');
+  warnEl.style.display = 'none';
+  var key = document.getElementById('acKey').value.trim();
+  var titleEn = document.getElementById('acTitleEn').value.trim();
+  var titleZh = document.getElementById('acTitleZh').value.trim();
+  var textEn = document.getElementById('acTextEn').value.trim();
+  var textZh = document.getElementById('acTextZh').value.trim();
+
+  if(!key || !titleEn || !textEn){
+    warnEl.textContent = 'Section key, English title, and English text are all required.';
+    warnEl.style.display = 'block';
+    return;
+  }
+  if(SECTIONS.some(function(s){ return s.id===key; })){
+    warnEl.textContent = 'That section key is already used — pick a different one.';
+    warnEl.style.display = 'block';
+    return;
+  }
+  var enParas = splitParagraphs(textEn);
+  var zhParas = textZh ? splitParagraphs(textZh) : [];
+  if(zhParas.length && zhParas.length !== enParas.length){
+    warnEl.textContent = 'English has ' + enParas.length + ' paragraph(s) but Chinese has ' + zhParas.length + ' — they should match 1-to-1 (separate paragraphs with a blank line). Chinese will be ignored for now; you can add it later.';
+    warnEl.style.display = 'block';
+    zhParas = [];
+  }
+  var paragraphs = enParas.map(function(en, i){
+    return { key: 'p'+(i+1), en: en, zh: zhParas[i] || en };
+  });
+
+  var btn = document.getElementById('acSubmit');
+  btn.disabled = true; btn.textContent = 'Saving\u2026';
+  try{
+    var r = await sb.from('manual_sections').insert({
+      section_key: key, title_en: titleEn, title_zh: titleZh || titleEn,
+      order_index: SECTIONS.length + 1, paragraphs: paragraphs, created_by: currentUserId
+    }).select().single();
+    if(r.error){ warnEl.textContent = 'Save failed: ' + r.error.message; warnEl.style.display = 'block'; return; }
+    SECTIONS.push({ id:key, title:titleEn, title_zh:titleZh||titleEn, paragraphs:paragraphs, _admin:true, _dbId:r.data.id });
+    document.getElementById('addChapterModal').style.display = 'none';
+    ['acKey','acTitleEn','acTitleZh','acTextEn','acTextZh'].forEach(function(id){ document.getElementById(id).value=''; });
+    renderSideNav();
+    renderSection(key);
+  } catch(e){
+    warnEl.textContent = 'Save failed. Check your connection and try again.';
+    warnEl.style.display = 'block';
+  } finally {
+    btn.disabled = false; btn.textContent = 'Save Chapter';
+  }
+});
+
 document.getElementById('bookmarksBtn').addEventListener('click', function(){
   var panel = document.getElementById('bookmarksPanel');
   var showing = panel.style.display !== 'none';
@@ -474,6 +622,36 @@ document.getElementById('bookmarksBtn').addEventListener('click', function(){
   panel.style.display = showing ? 'none' : 'block';
   document.getElementById('prefsPanel').style.display = 'none';
 });
+// ================= MOBILE SIDEBAR DRAWER (swipe left/right) =================
+function openNav(){ document.getElementById('sideNav').classList.add('open'); document.getElementById('navOverlay').classList.add('open'); }
+function closeNav(){ document.getElementById('sideNav').classList.remove('open'); document.getElementById('navOverlay').classList.remove('open'); }
+function toggleNav(){
+  var open = document.getElementById('sideNav').classList.contains('open');
+  if(open) closeNav(); else openNav();
+}
+document.getElementById('hamburgerBtn').addEventListener('click', toggleNav);
+document.getElementById('navOverlay').addEventListener('click', closeNav);
+
+(function(){
+  var startX = null, startY = null, tracking = false;
+  document.addEventListener('touchstart', function(e){
+    if(window.innerWidth > 760) return;
+    var t = e.touches[0];
+    startX = t.clientX; startY = t.clientY; tracking = true;
+  }, {passive:true});
+  document.addEventListener('touchmove', function(e){
+    if(!tracking || startX===null) return;
+    var t = e.touches[0];
+    var dx = t.clientX - startX, dy = t.clientY - startY;
+    if(Math.abs(dy) > Math.abs(dx)) return; // vertical scroll, ignore
+    var isOpen = document.getElementById('sideNav').classList.contains('open');
+    // Swipe right from near the left edge opens the drawer; swipe left closes it.
+    if(!isOpen && startX < 40 && dx > 60) { openNav(); tracking = false; }
+    else if(isOpen && dx < -60) { closeNav(); tracking = false; }
+  }, {passive:true});
+  document.addEventListener('touchend', function(){ tracking = false; startX = null; });
+})();
+
 document.getElementById('prefsBtn').addEventListener('click', function(){
   var panel = document.getElementById('prefsPanel');
   var showing = panel.style.display !== 'none';
@@ -489,10 +667,13 @@ async function checkAccess(){
   var CACHE_KEY = 'gate_ok_467988';
   var ANNO_CACHE_KEY = 'manual_annotations_cache';
 
-  function showReader(){
+  async function showReader(){
     gateEl.style.display = 'none';
     document.getElementById('readerRoot').style.display = 'flex';
     document.getElementById('langToggle').textContent = currentLang==='zh' ? 'EN' : '\u4e2d\u6587';
+    isAdmin = true; // this page is already gated to the single admin account
+    document.getElementById('addChapterBtn').style.display = '';
+    if(navigator.onLine) await loadExtraSections();
     renderSideNav();
     renderSection(currentSectionId);
   }
